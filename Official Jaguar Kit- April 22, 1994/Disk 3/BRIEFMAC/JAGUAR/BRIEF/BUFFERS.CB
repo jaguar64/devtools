@@ -1,0 +1,851 @@
+/* BRIEF -- Basic Reconfigurable Interactive Editing Facility */
+
+/* Written by Dave Nanian and Michael Strickman. */
+
+#include "dialog.h"
+#define esc ""
+extern display_file_name,
+		 to_bottom;
+
+/* buffers.cb: */
+
+/* This file contains all of the standard BRIEF macros for buffer */
+/* manipulation. */
+
+/* buf_list: */
+
+/* This macro provides the user with a list of buffers that can be */
+/* manipulated and scrolled through.  It is of interest because it */
+/* simulates an array of buffer ids using a system buffer.  Macro */
+/* programmers interested in using arrays should examine this code */
+/* carefully before implementing an array system of their own. */
+
+/* Change history: */
+
+/* Added wrap around to menu light bar. */
+/* Only the file path and name now appear in the list, with an asterisk */
+/* in column 1 to indicate a changed file. */
+/* The window now occupies up to the full screen length if enough */
+/* buffers are open but only enough lines for all buffers if less */
+/* than screen length.  It also auto sizes to the width of the longest */
+/* file name + 1 (To allow for the asterisk against changed files). */
+/* Since this could make for very narrow windows, the message at the */
+/* bottom of the window has been cut to a list of active keys. */
+/* The buffer list no longer contains the buffer number.  This is the */
+/* same as the "line" number on the command line. */
+
+/* Jon O'Brien (cody@cix) 4/10/89 */
+
+/* Added an improved _bookmark_menu macro I got from the Tec Rap board */
+
+/* Jon O'Brien (cody@cix) 20/12/89 */
+
+
+buf_list (...)
+{
+	int _buf_list, 	  /*	Buffer that contains visible list. */
+		 _buf_array,	  /*	Buffer that simulates an array. */
+		 _end_buf,		  /*	The buffer to be attached on exit. */
+		 _num_bufs, 	  /*	The number of buffers in the list. */
+		 _currbuf,		  /*	Current buffer No. */
+		 _scrlines, 	  /*	No of lines on screen */
+		 _scrcols,		  /*	No of columns on screen */
+		 _bottom,		  /*	Last row for window */
+		 _max_len,		  /*	Length of longest buffer name */
+		 _leftc, 		  /*	Left window column */
+		 _rightc;		  /*	Right window column */
+
+
+	global
+			 _buf_list,
+			 _buf_array,
+			 _end_buf,
+			 _num_bufs,
+			 _currbuf,
+			 _scrlines,
+			 _scrcols,
+			 _bottom,
+			 _max_len,
+			 _leftc,
+			 _rightc;
+
+	int start_buf, 	/*  The buffer we started on. */
+		 curr_buf,		/*  The buffer we're on (in the loop). */
+		 modified;		/*  Is the current buffer modified? */
+
+	string file_name, 	  /*	The file name of the buffer. */
+			 buffer_name;	  /*	The buffer name. */
+
+	_num_bufs = 0;
+	_max_len = 13;
+	_leftc = 0;
+	_rightc = 0;
+	_currbuf = 0;
+	inq_screen_size (_scrlines, _scrcols);
+
+	/*  First, we create the array and list buffers, making sure that they */
+	/*  have the "system" attributes.	We use non-file buffers because this is */
+	/*  temporary information. */
+	/* */
+	/*  The "_buf_list" buffer contains a textual list of all of the non */
+	/*  system buffers currently in memory.	"_buf_array" contains a list of the */
+	/*  corresponding buffer pointers.  Note that the buffer pointers are not */
+	/*  inserted into the buffer as is -- they are converted to string integers */
+	/*  first.  This prevents inserting bad characters like tab, return and EOF. */
+	
+	message ("Creating buffer list...");
+	/* First, we get the ID of the current buffer -- we have to */
+	/* restore it at the end of the macro.	After that, we create the */
+	/* array buffer and put it aside for the moment.  Note that the */
+	/* array buffer is a non-file buffer -- this prevents disk accesses */
+	/* since the file is held completely in memory. */
+	
+	start_buf = _end_buf = inq_buffer ();
+	_buf_array = create_buffer ("Buffer Array", NULL, 1);
+	/* Now, we create the buffer that the user will actually see on */
+	/* the screen, set it to be the current buffer, and set the tabs to */
+	/* the values we want (tabs default to every column). */
+	
+	set_buffer (_buf_list = create_buffer ("Buffers", NULL, 1));
+	tabs (5);
+	/* This loop creates both buffer lists:  the non-system buffers */
+	/* are looped through and information about them are culled and added */
+	/* to the list. */
+	
+	while (start_buf != curr_buf)
+		{
+		if (!curr_buf)
+			curr_buf = start_buf;
+		else
+			{
+			set_buffer (_buf_list);
+			insert ("\n");
+			set_buffer (_buf_array);
+			insert ("\n");
+			}
+		++_num_bufs;
+		message ("Creating buffer list [#%d]...", _num_bufs);
+		set_buffer (curr_buf);
+		inq_names (file_name, NULL, buffer_name);
+		modified = inq_modified ();
+		set_buffer (_buf_list);
+		if (strlen (file_name) > _max_len)
+			_max_len = strlen (file_name);
+		insert ((modified ? "*" : " ") + file_name);
+		set_buffer (_buf_array);
+		insert ("%d", curr_buf);
+		set_buffer (curr_buf);
+		curr_buf = next_buffer ();
+		}
+	if (_num_bufs > _scrlines - 3)
+		_bottom = _scrlines - 3;
+	else
+		_bottom = _num_bufs + 1;
+	message ("%d buffers in use", _num_bufs);
+
+	/* At this point, the array buffer and list buffer have been created */
+	/* and filled in.	We create a window to display the list in, initialize */
+	/* the marked area, set up a keymap, and call process.  Process handles */
+	/* the mainline loop -- we need only provide action routines. */
+	
+	_leftc = ((_scrcols - _max_len) - 4) / 2;
+	_rightc = (_leftc + _max_len) + 2;
+	create_window (_leftc, _bottom, _rightc, 0, ",E,D,W,ESC");
+	attach_buffer (_buf_list);
+
+	keyboard_push ();
+	assign_to_key ("<Down>", "_buf_down");
+	assign_to_key ("<Up>", "_buf_up");
+	assign_to_key ("<PgUp>", "_buf_pgup");
+	assign_to_key ("<PgDn>", "_buf_pgdn");
+	assign_to_key ("<Home>", "_buf_home");
+	assign_to_key ("<End>", "_buf_end");
+	assign_to_key ("<Ctrl-PgUp>", "_buf_home");
+	assign_to_key ("<Ctrl-PgDn>", "_buf_end");
+	assign_to_key ("d", "_buf_delete");
+	assign_to_key ("D", "_buf_delete");
+	assign_to_key ("<Ctrl-minus>", "_buf_delete");
+	assign_to_key ("e", "_buf_edit");
+	assign_to_key ("E", "_buf_edit");
+	assign_to_key ("<Alt-e>", "_buf_edit");
+	assign_to_key ("W", "_buf_write");
+	assign_to_key ("w", "_buf_write");
+	assign_to_key ("<Alt-w>", "_buf_write");
+	assign_to_key ("<Enter>", "_buf_edit");
+	assign_to_key ("<Esc>", "exit");
+
+	move_abs (1, 100);
+	drop_anchor ();
+	move_abs (1, 1);
+	set_buffer (_buf_array);
+	move_abs (1, 1);
+	set_buffer (_buf_list);
+	refresh ();
+	process ();
+
+	/* Now that we're back from the processing, we pop the keymap that */
+	/* we created, raise the assorted anchors, and delete the temporary */
+	/* window and the buffers. */
+	
+	keyboard_pop ();
+	raise_anchor ();
+	delete_window ();
+	delete_buffer (_buf_list);
+	delete_buffer (_buf_array);
+
+	/* If we end with a different buffer than we started with, we */
+	/* attach it to the current window and display its file name. */
+	/* Otherwise, we set the current buffer back, and call NEW_FILE */
+	/* to make sure its defaults are reset. */
+	
+	set_buffer (_end_buf);
+	inq_names (file_name);
+	edit_file (file_name);
+}
+_buf_home (...)
+{
+	raise_anchor ();
+	top_of_buffer ();
+	drop_anchor (3);
+	set_buffer (_buf_array);
+	top_of_buffer ();
+	set_buffer (_buf_list);
+}
+
+/* _buf_down: */
+
+/* This routine is called whenever the user presses a down arrow. */
+/* It moves the array buffer and list buffer's current lines, ensuring */
+/* the user does not go past the end of the buffer. */
+
+/*  Now wraps around.  Jon O'Brien. */
+
+
+_buf_down (...)
+{
+	int line;
+
+	inq_position (line);
+	if (line == _num_bufs)
+		{
+		_buf_home ();
+		return 1;
+		}
+	else
+		{
+		raise_anchor ();
+		move_abs (line + 1, 0);
+		drop_anchor (3);
+		set_buffer (_buf_array);
+		move_abs (line + 1, 0);
+		set_buffer (_buf_list);
+		returns 1;
+		}
+}
+_buf_end (...)
+{
+	int num_lines;
+
+	num_lines = _bottom - 1;
+	raise_anchor ();
+	end_of_buffer ();
+	beginning_of_line ();
+	to_bottom ();
+	drop_anchor (3);
+	set_buffer (_buf_array);
+	end_of_buffer ();
+	beginning_of_line ();
+	set_buffer (_buf_list);
+}
+
+/* _buf_up: */
+
+/* This macro is called whenever the user presses the up arrow.  It */
+/* moves up in the list and array buffers, not going past the top of the */
+/* buffer. */
+
+/*  Now wraps around.  Jon O'Brien. */
+
+
+_buf_up (...)
+{
+	int line;
+
+	inq_position (line);
+	if (line == 1)
+		{
+		_buf_end ();
+		return 1;
+		}
+	else
+		{
+		raise_anchor ();
+		move_abs (line - 1, 0);
+		drop_anchor (3);
+		set_buffer (_buf_array);
+		move_abs (line - 1, 0);
+		set_buffer (_buf_list);
+		returns 1;
+		}
+}
+
+/* _buf_pgup: */
+
+/* This macro is called whenever the user presses PgUp.  It moves up */
+/* one screen in the list and array buffers, not going past the top of the */
+/* buffer. */
+
+_buf_pgup (...)
+{
+	int num_lines;
+
+	num_lines = _bottom - 1;
+	inq_position (_currbuf);
+	if (num_lines >= _currbuf)
+		_buf_home ();
+	else
+		while (num_lines--)
+			_buf_up ();
+}
+
+/* _buf_pgdn: */
+
+/* This macro is called whenever the user presses PgDn.  It moves */
+/* down one page/screen in the buffer list and the array. */
+
+_buf_pgdn (...)
+{
+	int num_lines;
+
+	num_lines = _bottom - 1;
+	if (num_lines + _currbuf >= _num_bufs)
+		_buf_end ();
+	else
+		while (num_lines--)
+			_buf_down ();
+}
+
+/* _buf_delete: */
+
+/* This routine is called when the user wants to delete a buffer. */
+/* It makes sure the buffer is not in a window, and prompts the user */
+/* if the buffer has been modified. */
+
+_buf_delete (...)
+{
+	int buf_to_delete;
+
+	string misc_str;
+
+	misc_str = "y";
+	set_buffer (_buf_array);
+	buf_to_delete = atoi (read ());
+	set_buffer (buf_to_delete);
+	if (!inq_views ())
+		{
+		if (inq_modified ())
+			{
+			keyboard_flush ();
+			if (!get_parm (NULL, misc_str, "This buffer has not been saved.  Delete [ynw]? ", 1))
+				misc_str = "n";
+			}
+		if (index ("yY", misc_str) || index ("wW", misc_str) && _buf_write () > 0)
+			{
+			set_buffer (_buf_list);
+			delete_line ();
+			set_buffer (_buf_array);
+			delete_line ();
+			delete_buffer (buf_to_delete);
+			--_num_bufs;
+			set_buffer (_buf_list);
+			if (inq_position ())
+				_buf_up ();
+			else
+				{
+				raise_anchor ();
+				move_rel (0, 0);
+				drop_anchor (3);
+				move_rel (0, 0);
+				}
+			}
+		else
+			if (!index ("wW", misc_str))
+				message ("Buffer not deleted.");
+		}
+	else
+		error ("You can't delete a viewed buffer.");
+	set_buffer (_buf_list);
+}
+/* _buf_edit: */
+
+/* This routine is called when the user is on a buffer that he wants */
+/* to edit.	It sets the global "_end_buf" variable to the current */
+/* line's buffer, and calls exit so no further processing takes place. */
+
+_buf_edit (...)
+{
+	set_buffer (_buf_array);
+	_end_buf = atoi (read ());
+	set_buffer (_buf_list);
+	exit ();
+}
+
+/* _buf_write: */
+
+/* This routine is called when the user wants to write a modified */
+/* buffer.  It makes sure the buffer is modified -- if so, it's written */
+/* and the information in the window is updated. */
+
+_buf_write (...)
+{
+	int old_msg_level,
+		 ret_code;
+
+	set_buffer (_buf_array);
+	set_buffer (atoi (read ()));
+	if (inq_modified ())
+		{
+		old_msg_level = inq_msg_level ();
+		set_msg_level (0);
+		if ((ret_code = write_buffer ()) > 0)
+			{
+			set_msg_level (old_msg_level);
+			set_buffer (_buf_list);
+			beginning_of_line ();
+			delete_char ();
+         insert (" ");
+			beginning_of_line ();
+			}
+		else
+			set_msg_level (old_msg_level);
+		}
+	else
+		error ("Buffer not modified.");
+	set_buffer (_buf_list);
+	returns ret_code;
+}
+
+/* edit_file: */
+
+/* This macro replaces the built-in edit_file function:  it displays */
+/* the file name of the edited file if the edit operation was successful. */
+
+replacement edit_file (...)
+{
+	int ret_code,
+		 old_msg_level;
+
+	old_msg_level = inq_msg_level ();
+	if (inq_called () == "")
+		set_msg_level (0);
+	ret_code = edit_file ();
+	set_msg_level (old_msg_level);
+	if (ret_code == 1)
+		display_file_name ();
+	returns ret_code;
+}
+
+/* _multifile_edit_file: */
+
+/* This macro is called by the file completion functions when more then */
+/* one file is selected from the completion menu. */
+
+_multifile_edit_file (...)
+{
+	int completion_buf_id;
+	int old_buf_id;
+
+	string path;
+	string file_name;
+
+	get_parm (0, completion_buf_id);
+	get_parm (1, path);
+
+	old_buf_id = set_buffer (completion_buf_id);
+
+	top_of_buffer ();
+	while (!inq_position () && (file_name = trim (ltrim (read ()))) != "")
+		{
+		edit_file (path + file_name);
+		set_buffer (completion_buf_id);
+		down ();
+		}
+	set_buffer (old_buf_id);
+}
+
+/* edit_next_buffer: */
+
+/* Edits the next buffer in the buffer list in the current window.  If */
+/* there are no other buffers, an error message is displayed. */
+
+edit_next_buffer (...)
+{
+	string file_name;
+
+	int new_buffer;
+
+	new_buffer = next_buffer ();
+	if (new_buffer != inq_buffer ())
+		{
+		set_buffer (new_buffer);
+		inq_names (file_name);
+		edit_file (file_name);
+		}
+	else
+		error ("No other buffers.");
+}
+
+/* edit_prev_buffer: */
+
+/* Edits the previous buffer in the buffer list. */
+
+edit_prev_buffer (...)
+{
+	string file_name;
+
+	int old_buffer;
+
+	old_buffer = inq_buffer ();
+	while (next_buffer () != old_buffer)
+		set_buffer (next_buffer ());
+	if (inq_buffer () != old_buffer)
+		{
+		inq_names (file_name);
+		edit_file (file_name);
+		}
+	else
+		error ("No other buffers.");
+}
+
+/* delete_curr_buffer: */
+
+/* This function deletes the current buffer, if it is unmodified, */
+/* there is another buffer in the list to replace it, and it is only */
+/* visible in one window. */
+
+/* If the buffer is modified, the user is asked if he really wants to */
+/* delete the buffer.  If he answers yes, the deletion is performed. */
+
+/* If there are no other buffers, or the buffer is in an overlapping */
+/* window and any other window, the deletion is not performed. */
+
+delete_curr_buffer (...)
+{
+	int old_buf_id,
+		 new_buf_id,
+		 window_buf_id,
+		 orig_window_id,
+		 curr_window_id;
+	string reply,
+			 file_name;
+
+
+	old_buf_id = inq_buffer ();
+	new_buf_id = next_buffer ();
+
+   if (old_buf_id == new_buf_id)
+		{
+		error ("Can't delete: no other buffers.");
+		return 0;
+		}
+	orig_window_id = inq_window ();
+	if (inq_window_info () == 1)
+		{
+		curr_window_id = next_window ();
+		while (orig_window_id != curr_window_id)
+			{
+			inq_window_info (curr_window_id, window_buf_id);
+			if (window_buf_id == old_buf_id)
+				{
+				error ("Can't delete: buffer's windows overlap.");
+				return 0;
+				}
+			curr_window_id = next_window (curr_window_id);
+			}
+		}
+	if (inq_modified ())
+		{
+		keyboard_flush ();
+		if (!get_parm (NULL, reply, "This buffer has not been saved.  Delete [ynw]? ", 1))
+			return 0;
+		else
+			if (!strlen (reply) || !index ("yYwW", reply))
+				{
+				message ("Buffer not deleted.");
+				return 0;
+				}
+		if (index ("wW", reply))
+			{
+			int old_msg_level,
+				 ret_code;
+
+			old_msg_level = inq_msg_level ();
+			set_msg_level (0);
+			ret_code = write_buffer ();
+			set_msg_level (old_msg_level);
+			if (ret_code <= 0)
+				return 0;
+			}
+		}
+	set_buffer (new_buf_id);
+	inq_names (file_name, NULL);
+	set_buffer (old_buf_id);
+	edit_file (file_name);
+	if (inq_views (old_buf_id) != 0)
+		{
+		curr_window_id = next_window ();
+		while (orig_window_id != curr_window_id)
+			{
+			inq_window_info (curr_window_id, window_buf_id);
+			if (old_buf_id == window_buf_id)
+				{
+				set_window (curr_window_id);
+				edit_file (file_name);
+				}
+			curr_window_id = next_window (curr_window_id);
+			}
+		if (inq_window () != orig_window_id)
+			set_window (orig_window_id);
+		}
+	delete_buffer (old_buf_id);
+	returns 1;
+}
+
+/* _bad_key: */
+
+/* This routine adds menus to some prompts. */
+
+replacement _bad_key (...)
+{
+	int key_pressed;
+
+	key_pressed = read_char ();
+	if (inq_command () == "goto_bookmark" && key_pressed == key_to_int ("<Tab>"))
+		return _bookmark_menu ();
+	push_back (key_pressed);
+	return _bad_key ();
+}
+
+/********* Integrated the macros below.   Jon O'Brien 20/12/89 **********/
+
+/* This new macro is a substitute for _bookmark_menu (which is included */
+/* in the buffers.m macro in Brief 2.1).  It is NOT a replacement macro for */
+/* _bookmark_menu or goto_bookmark (which I couldn't figure out how to do) */
+/* but a slightly modified _bookmark_menu (using the original BRIEF code). */
+/* _bookmark_menu normally worked if a "<Tab>" was hit in reponse to the */
+/* prompt "Go to bookmark [1-10]: " and puts up the bookmark list.  Not being */
+/* capable of training myself to hit "<Tab>" to expand a prompt I stole the */
+/* part of the macro which creates the list and incorporated it into a macro */
+/* which could be assigned a key ("<Alt-j>" in my case) to pop the list up */
+/* right off the bat (similar to the buffer_list macro usually assigned to */
+/* "<Alt-b>".  The list was also modified to shorten the file name and display */
+/* about 25 characters of the text of the file that follows the book mark.  If */
+/* a newline or tab character was encountered then either "<CR>" or "<TB>" */
+/* is shown respectively. */
+
+/* I added: */
+
+/* (assign_to_key "<Alt j>" "bookmark_menu") */
+
+/* in my initials macro. */
+
+/* Robert Briber 9/89 */
+/* Kensington, MD */
+
+/* Note if you are using the scraps2 macro for displaying a menu of */
+/* 10 virtual scrap buffers then the macro _get_string */
+/* may be repeated.  One of the two (either here or in scraps2 could be */
+/* deleted and the macro recompiled. */
+
+#define SYSTEM   1	  /*	The value to use for system buffers. */
+#define NEW_FILE 1	  /*	The value to use for new file attachments. */
+
+_bookmark_menu (...)
+{
+	int	test_parm, bookmark_number, bookmark_buffer, line_pos, col_pos;
+
+	string	temp_string;
+
+	int	menu_buf,
+			old_buf,
+			old_buf2,
+			curr_buf,
+			line,
+			col,
+			i,
+			l,
+			num_bookmarks,
+			_bookmark;
+
+	string	bookmark,
+				file_name,
+				text_string;
+
+	global	_bookmark;
+
+	while (i < 10) 										 /*  count the number */
+		/*  of bookmarks */
+		{
+		if (goto_bookmark (i, curr_buf, line, col))
+			{
+			++num_bookmarks;
+			}
+		++i;
+		}
+	if (num_bookmarks == 0)
+		{
+		beep ();
+		error ("No bookmarks have been dropped");
+		}
+	else
+		{
+		int	num_lines,
+				num_cols,
+				lx,
+				by,
+				rx,
+				ty;
+
+		old_buf = inq_buffer ();
+		sprintf (bookmark, "%d bookmark%s ", num_bookmarks, num_bookmarks == 1 ? "" : "s");
+		set_buffer (menu_buf = create_buffer (bookmark, NULL, SYSTEM));
+		num_bookmarks = 0;
+		i = 1;
+		tabs (2, 13, 19, 25, 40, 80);
+
+		while (i <= 10)
+			{
+			if (goto_bookmark (i, curr_buf, line, col))
+				{
+				if (++num_bookmarks == 1)
+					insert ("\n\tBookmark\tLine\tCol\tFile\tText\n\t--------\t----\t---\t----\t----");
+				insert ("\n");
+				set_buffer (curr_buf);
+				inq_names (file_name);
+				file_name = substr (file_name, rindex (file_name, "\\") + 1, 12);
+				text_string = _get_string (curr_buf, line, col);
+				sprintf (bookmark, "\t%d\t%d\t%d\t%s\t%s\t;", i, line, col, file_name, text_string);
+				sprintf (bookmark, "%s%d", bookmark, i);
+				set_buffer (menu_buf);
+				insert (bookmark);
+				}
+			++i;
+			}
+		set_buffer (old_buf);
+
+		_bookmark = -1;
+		inq_screen_size (num_lines, num_cols);
+
+		num_lines /= 2;
+		num_cols /= 2;
+
+		lx = num_cols - 36;
+		rx = num_cols + 36;
+		ty = num_lines - (4 + (num_bookmarks + 4) / 2);
+		by = ty + (num_bookmarks + 5);
+
+		_process_menu (lx, by, rx, ty, NULL, " or  to move, <Enter> to select, <Esc> to exit", NULL, menu_buf, "_bookmark_action", TRUE);
+
+		if (_bookmark >= 0)
+			{
+			goto_bookmark (_bookmark);
+			}
+		}
+}
+
+/* 		_bookmark_action: */
+
+/* 		This is the action routine for the dialog manager. */
+
+
+_bookmark_action (...)
+{
+	int	event_type,
+			button_number;
+
+	string	button_text;
+
+	get_parm (0, event_type);
+
+
+	switch (event_type)
+		{
+		case DIALOG_MOVE_MENU:
+			{
+			get_parm (2, button_text);
+			if (index (button_text, ";"))
+				returns TRUE;
+			else
+				returns FALSE;
+			}
+		case DIALOG_PICK_MENU:
+		case DIALOG_F10:
+			{
+			get_parm (2, button_text);
+			_bookmark = atoi (substr (button_text, rindex (button_text, ";") + 1));
+			_dialog_esc ();
+         insert (esc);
+			returns TRUE;
+			}
+		}
+}
+
+
+/*  _get_string uses the buffer id passed to it to read 25 charaters of text */
+/*  from the line and column position which are also passed to it. */
+/*  the string is translated to remove any tabs and new lines (which are */
+/*  translated to "<TB>" and "<CR>" repectively and then the string is */
+/*  returned to the calling macro.	Also shows up in scraps2. */
+
+/*  RMB 9/89 */
+
+_get_string (...)
+{
+	string	text_string;
+
+	int	buff_id,
+			old_buff_id,
+			start_line,
+			start_col;
+
+	buff_id = 0;
+	get_parm (0, buff_id);
+	get_parm (1, start_line);
+	get_parm (2, start_col);
+	old_buff_id = inq_buffer ();
+	set_buffer (buff_id);
+	save_position (); 							 /*  read */
+	move_abs (start_line, start_col);		 /*  in 25 characters of text. */
+	text_string = read (25);				 /*  Search string for newlines */
+	if (index (text_string, "\n"))		/*  and tabs. */
+		{
+		text_string = substr (text_string, 1, index (text_string, "\n") - 1);
+		text_string += "<CR>";
+		}											  /*	truncate text at newline and */
+	/*  indicate this with "<CR>". */
+	if (index (text_string, "\t"))
+		{
+		string	text_string2;				/*  substitute the string "<TB>" for */
+		int	k; 								/*  any tab character found in the */
+		k = 1;								  /*	string. */
+		while (k <= strlen (text_string))
+			{
+			if (substr (text_string, k, 1) == "\t")
+				{
+				text_string2 += "<TB>";
+				}
+			else
+				{
+				text_string2 += substr (text_string, k, 1);
+				}
+			++k;
+			}
+		text_string = text_string2;
+		}
+	if (strlen (text_string) > 25)
+		text_string = substr (text_string, 1, 25);
+	text_string += "...";
+	restore_position ();
+	set_buffer (old_buff_id);
+	returns text_string;
+}

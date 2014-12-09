@@ -1,0 +1,110 @@
+{\rtf1\ansi \deff0\deflang1024{\fonttbl{\f0\froman Times New Roman;}{\f1\froman Symbol;}{\f2\fswiss Arial;}{\f3\fnil Bitstream Charter Black;}{\f4\fnil Bitstream Charter;}{\f5\froman Bitstream Charter Bold;}}
+{\colortbl;\red0\green0\blue0;\red0\green0\blue255;\red0\green255\blue255;\red0\green255\blue0;\red255\green0\blue255;\red255\green0\blue0;\red255\green255\blue0;\red255\green255\blue255;\red0\green0\blue127;\red0\green127\blue127;\red0\green127\blue0;
+\red127\green0\blue127;\red127\green0\blue0;\red127\green127\blue0;\red127\green127\blue127;\red192\green192\blue192;}{\stylesheet{\fs20\lang1033 \snext0 Normal;}}{\info{\author Mike Fulton}{\creatim\yr1994\mo4\dy21\hr16\min30}{\version1}{\edmins10}
+{\nofpages4}{\nofwords0}{\nofchars0}{\vern16433}}\paperw11520\paperh15264\margl720\margr720\margt720\margb720\gutter0 \sectd \pgnrestart\linex0 \pard\plain \qc\ri-10 \fs20\lang1033 {\b\f2\fs36 Jaguar Sound Tool}{\b\f2\fs36 
+\par }{\plain \f2\lang1033 User Guide}{\plain \f2\lang1033 
+\par }\pard \ri-10 {\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 The Jaguar sound tool was written to provide a "user friendly" interface to the}{\plain \f2\lang1033  Jaguar }{\plain \f2\lang1033 synth}{\plain \f2\lang1033 esiz}{\plain \f2\lang1033 er}{\plain \f2\lang1033 
+ module.  The sound tool provides a way of }{\plain \f2\lang1033 editing}{\plain \f2\lang1033  up to 8 voices by using one of the seven }{\plain \f2\lang1033 synth}{\plain \f2\lang1033 esizer}{\plain \f2\lang1033 
+ modules.  Each voice can be turned on individually or, together with other voices.  Voices can be saved to or loaded from the host machine allowing you to save work in progress.  Additionally, you may save your work in }{\plain \f2\lang1033 ASCII}
+{\plain \f2\lang1033  form, ready to be linked into your source code.   For the rest of this document, it will be assumed that you have read the "Jaguar Synth" document.}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \b\f2\lang1033 General User }{\plain \b\f2\lang1033 I}{\plain \b\f2\lang1033 n}{\plain \b\f2\lang1033 t}{\plain \b\f2\lang1033 erface }{\plain \b\f2\lang1033 R}{\plain \b\f2\lang1033 u}{\plain \b\f2\lang1033 les}{\plain \b\f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+In general, each of the synth modules share the same user interface.  Whenever possible, you'll find that the joypad keys display the same functionality throughout the different synth editors.  You can move from object to object within an editor by holdin
+}{\plain \f2\lang1033 
+g down the Fire B button and then pressing up, down left, or right depending on the placement of the object that you would like to go to.  An object is defined as a single slider, a group of buttons, or any other item that allows you to edit the voi}
+{\plain \f2\lang1033 
+ce that you're working on.  As you move to each object, you'll see it being selected by an orange box drawn around it.  The two main object types are numerical sliders and buttons.  To change the value of a numerical slider, use the joypad up and down key
+}{\plain \f2\lang1033 
+s to add to or subtract from the total.  Using the left and right buttons,  you can move the slider cursor left or right.  This will allow you to increment or decrement your slider value by a larger or smaller amount.  Notice that the value will only incr
+}{\plain \f2\lang1033 em}{\plain \f2\lang1033 
+ent or decrement by 1 each time you press the up or down key.  To scroll through these numbers more quickly, hold down the option key while pressing up or down.   Alternatively, you may type in the direct value and the number will appear at the cursor loc
+}{\plain \f2\lang1033 ation.  Button groups are much simpler to use.  Simply select the joypad key which represents the button which you wish to select.   }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 The following is a brief discussion of each of the synth editors along with a description of the main menu screen.  }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \b\f2\lang1033 Main Menu}{\plain \b\f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 Each of the 8 synth voices can be }{\plain \f2\lang1033 edited}{\plain \f2\lang1033 
+ through this main menu screen.  As discussed earlier, use the Fire B key along with joypad up and down to scroll through each voice.  When a voice is chosen, hit the up and down buttons to select }{\plain \f2\lang1033 
+a synth editor then hit 2 to edit the voice.  Turn the voice on or off by hitting the 1 key.  Hitting the Fire A key will turn on all of your enabled voices at once.  Note that at startup, each of the voices except for the first one is disabled.  Once you
+}{\plain \f2\lang1033  have}{\plain \f2\lang1033  }{\plain \f2\lang1033 edited}{\plain \f2\lang1033  a voice, you can return to the main menu by either using the main menu button or, by hitting the pause key.  }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 The final row of buttons allows you to load or save out your current work.  To save your work, move down until you've selected the last row of buttons.  Hit the "2" button and the }{\plain \f2\lang1033 sndtool}{\plain \f2\lang1033 
+ program}{\plain \f2\lang1033  will cause a break command on your host computer.  You will be prompted by an alert box  with instructions on saving your file.  In the same manner, an }{\plain \f2\lang1033 ASCII}{\plain \f2\lang1033 
+ file can be saved out by hitting the "3" key}{\plain \f2\lang1033 .  Note that this is a 100% }{\plain \f2\lang1033 ASCII}{\plain \f2\lang1033 
+ file which can be read into any text editor.  Each of the voices is separated by a different label,  voice1:, voice2:, etc.  You will also find envelopes, user defined waveforms, and wavetable instructions saved out as well.  All addresses within the voi
+}{\plain \f2\lang1033 ce table will be represented by a label.  This label will either correspond to one of the labels embedded in the file, or, as in the case of sample addresses, simply be }{\plain \f2\lang1033 referenced as an }{\plain \f2\lang1033 
+external lable }{\plain \f2\lang1033 at the top of the file.}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 Finally, use the }{\plain \f2\lang1033 
+last button to load in user defined waveforms.  You can load in up to 4 different user defined waveforms.  They are stored at the addresses UWAVE1, UWAVE2, ... UWAVE5.  To read in a waveform for the first user defined wave, use the command:}{\plain 
+\f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 \tab }{\plain \f2\lang1033 read filename .UWAVE1}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \b\f2\lang1033 Simple FM editor}{\plain \b\f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 Use the numerical sliders to change frequency and depth of modulation.  Use the text sliders to select your waveforms and pitch.  Select these values by using the  up and down joypad keys until the selected pitch or wave}{\plain 
+\f2\lang1033 
+form appears in the slider.  Use the Frequency mode button to select the way the frequency value is calculated.  When in "Fixed" mode, the frequency value in the voice table will be whatever is shown in the slider.  When in "ratio" mode, the frequency val
+}{\plain \f2\lang1033 
+ue will be whatever is in the slider multiplied by whatever pitch value you have.  Note that the frequency multiplier will be in the 15.16 format so for instance, 1.32768 in the slider will represent a multiplier value of 1.5.   Exit the synth by using th
+}{\plain \f2\lang1033 e }{\plain \f2\lang1033 Main Menu button or by hitting the pause key in any object.  Play the sample by pressing the Fire A button. Press it again to turn the voice off.}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \b\f2\lang1033 Complex FM editor}{\plain \b\f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 Identical to simple fm except for extra sliders to provide an extra indirection of modulation.  The synth documentation will provide the needed details.  }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \b\f2\lang1033 8 and 16 bit sample editors}{\plain \b\f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+From a user interface standpoint these two editors are virtually identical.  There is currently a default 16 bit sample built into the sound editor.  To load additional samples, select the "Load Sample" button from the first group of buttons. }{\plain 
+\f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 The }{\plain \f2\lang1033 sound too}{\plain \f2\lang1033 l}{\plain \f2\lang1033  will currently handle Audio }{\plain \f2\lang1033 IFF}{\plain \f2\lang1033  files and AVR files as well as  raw sample }{\plain \f2\lang1033 f}{\plain 
+\f2\lang1033 iles.  Since there is no header information stored with a raw sample file, you must set the variable .samplesize to let the sound tool know how big the newly loaded sample is.}{\plain \f2\lang1033 
+  You can accomplish this by typing in the following:}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 \tab }{\plain \f2\lang1033 sl  .samplesize  (type in new number of samples here)}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 You can now type in "g .continue" to return to the program.  Currently the maximum sample file size that the sound tool will accept is 200000 bytes. }{\plain \f2\lang1033  }{\plain \f2\lang1033 
+(NOTE:  The tool currently does not extract pitch information from AIFF files.) }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 Use the numerical sliders to set loop length, loop end and pitch values.  You can play the sample by pressing the Fire A button at any time.  If the "Loop On" but}{\plain \f2\lang1033 
+ton has been selected, the sample will play continuously, looping through the parameters which you have set up.  Once the Fire A button has been released, the synth will play the rest of the sample.}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \b\f2\lang1033 Waveform editor}{\plain \b\f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+Use the numerical sliders to set rate, loop end, and loop length.  Use the up and down buttons to cycle through the given pitches and waveforms.  You can edit the envelope by first making it the current object.  Use the joypad up and down buttons to incre
+}{\plain \f2\lang1033 ase or decrease values at the curren}{\plain \f2\lang1033 
+t point.  Hold down the option key to change this value rapidly.  Move to the next point in the envelope by using the joypad left and right buttons.  Insert points by holding down the fire C button then hitting the joypad up button.  In the same way, dele
+}{\plain \f2\lang1033 
+te points by holding down Fire C and the joypad down button.  Pressing the 0 number key will restore the envelope to a standard default.  You may choose any one of five envelopes (through the envelope slider) to sample or edit.  Each time you scroll throu
+}{\plain \f2\lang1033 gh}{\plain \f2\lang1033  an envelope you will be able to see it change visually on the screen.  The voice can be played by using the Fire A button.  As with the sample editor, the sound will loop }{\plain \f2\lang1033 
+until the Fire A button is released.}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 A new envelope can be saved or loaded by selecting the load/save menu button.  Load or save functions will affect the current envelope. (The one displayed in the slider)  After breaking, you will be }{\plain \f2\lang1033 prompte}
+{\plain \f2\lang1033 d}{\plain \f2\lang1033  to input the correct commands to load an envelope.  At this point you can also save out the }{\plain \f2\lang1033 current envelope to be used at another time.}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \b\f2\lang1033 FM Envelope}{\plain \b\f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 This synth editor combines the features of the  waveform and simple FM synths.}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 See the Synth document for details.}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \b\f2\lang1033 2^N WaveTable Editor}{\plain \b\f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+The 2^N Wavetable editor will allow you to edit a set of wavetable instructions.  Use the sustain/release buttons to select which list of instructions you want to edit.  The large object in the center of the screen will hold your list of instructions.  No
+}{\plain \f2\lang1033 tice tha}{\plain \f2\lang1033 
+t the current instruction in this list will be highlighted in green.  Use the up and down joypad keys to scroll the list.  This current instruction will also be represented by the sliders at the bottom of the screen.  You can use these sliders to create a
+}{\plain \f2\lang1033 
+ new wavetable instruction.  Use the panel of buttons on the right side of the screen to insert the new instruction (represented by the slider values)  into the actual wavetable instruction list.  You can also change the existing instruction or remove an 
+}{\plain \f2\lang1033 in}{\plain \f2\lang1033 
+struction using this bank of buttons.  The last instruction in your sustain list will automatically loop to the first instruction.  If you would rather loop to another instruction, place the index of the instruction that you want to loop to into the Loop 
+}{\plain \f2\lang1033 To slider.  Notice that the Fade Length slider shows positive values.  The tool will negate the value befo}{\plain \f2\lang1033 re passing it on to the synth.}{\plain \f2\lang1033 
+\par }{\plain \f2\lang1033 
+\par }}

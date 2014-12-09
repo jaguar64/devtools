@@ -1,0 +1,65 @@
+Hi Kerry,
+
+regarding to the Object Processor I'd like to give a short more general
+description of what is going on in this strange thing :-).
+
+1) ALL output goes into a line buffer. Pretty much the Object Processor looks
+like glued together with a thing other machines refer to as a SHIFTER chip.
+
+2) As you tell the Object Processor to use an object list by setting up the
+OLP, it reads the data structure from memory, looks into ypos of the object
+and determines, if it will have to grab any data from the object to be
+displayed.
+
+3) If the line that is built in the line buffer in order to prepare it to go
+out to the screen within the next 64 microseconds (that is about how long it
+takes on a NTSC system) is a line, where parts of the object should be visible
+due to its ypos value, the object processor grabs the data according to the
+setup of DWIDTH and puts them into the line buffer, overwriting whatever may
+have been at the position refered to by the objects xpos value.
+
+4) After all data is fetched for this object, the object processor jumps to
+the next entry of the object list to do the same compare-y-and-modify-linebuffer-
+if-object-should-be-displayed-in-that-line type of thing
+
+5) If the Object Processor is encountering a GPU object, a GPU interrupt
+routine should be set up, because this then will be called. This can handle
+almost any kind of modification to either line buffer, object data or whatever
+almost any time during building of a line.
+
+6) After the Object Processor is through all elements of the object list,
+you normally would see the line going out to the screen. If not, them
+something went quite wrong.
+
+This induces some conclusions:
+
+a) the limitation in display is the time you have to create the line in the
+line buffer. As data has to be fetched from all objects sharing the same
+horizontal line, the data read time is the major factor limiting its display.
+
+This is basically the time to read object header data and the entire object
+data and store it in the line buffer.
+
+For experimenting with it and getting some limits you could set up a list of
+objects, all 24 bit depth and 320x200 sized, all at the same position.
+
+This should give a problem with display after a certain number of different
+objects in the list (befor which it just should work - the first added
+object of the list that crashe obviously overrides the time you have to
+go through all data for a display. Please let me know the results.
+
+b) the last modification to the line buffer is usually done by the last
+object in the list.
+
+c) I you try to fetch more data than possible to access during 64 microseconds
+all kinds of messy things may happen or it just crashes.
+
+d) If you want to know if what you want to do works, try worst-case-scenarios
+and change them to come back to more real things (like trying to scroll a 10
+object list with 24 bit depth of 320x200 all starting from the same position
+by changing xpos and ypos independantly - I doubt this would work, but I do
+not know if this it the limit - and reducing the bandwidth requirements by
+shortening the list on an object-per-object base).
+
+Hope that helps. Bye, Normen.
+

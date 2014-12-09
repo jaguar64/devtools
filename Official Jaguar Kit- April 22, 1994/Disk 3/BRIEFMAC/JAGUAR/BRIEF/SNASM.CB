@@ -1,0 +1,1318 @@
+
+#include "dialog.h"
+
+
+#define DOMAKE  1
+#define DOSEL	2
+#define THISASSEM 3
+#define DODEBUG 4
+#define SETBUG  5
+#define DOEVAL  6
+#define DOLABEL 7
+#define LASTLAB 8
+#define SAVEALL 9
+#define ERRWIN  10
+#define NXTERR  11
+#define VERSION 12
+
+// This version number is VITAL to install programs upgrading the SNASM 
+// macros - please do not alter it
+
+#define VERSION_NO "1.51"
+
+string ext(string,string);
+
+
+	extern int do_error_window;
+	extern int go_next_error;
+
+	extern	_save_state (),
+				_restore ();
+
+	extern _exit();
+	extern display_file_name;
+	extern string strip(string tgt_str);
+	extern buffer_top();
+	extern buffer_bottom();
+	extern single_up();
+	extern single_down();
+	extern snm_insert_sorted(string,int,int);
+	extern run_eval();
+	extern _fl_insert_pos(int,int,string);
+	extern err_window();	
+	extern _find_label_init();
+	extern bottom_of_buffer();
+	extern writeall_buffer();
+	extern snmk_run();
+	extern Snmkerr();
+	extern undo_find_label();
+	extern run_bug();
+	extern find_err_type(string);
+	extern goto_error(string,int);
+	extern ErrorPrj;
+
+	void assem_thisfile();
+
+_init(void)
+
+{
+	global string 	Prjname,
+						Infostr="/i",
+						Debugstr="",
+						Quietstr="",
+						Prjstr="/p",
+						Macstr="",
+						Filestr="/f",
+						Allstr="",
+					  	cmdline="",
+						snmerr_err="",
+						SnErrors="SnMk.err",
+						Errorfile="Errors.err",
+					 	current_errfile = "",
+			 		  	type_of_err,
+						SNCMD="Snasm658",			
+						pre_fname,after_fname;
+
+
+	global int 		edit_buffer=0,
+				 		snmerr_line=1,
+						change_back=1,
+				 		error_buffer = 0,
+				  		at_endof_buf=0,
+				  		old_error_date = 0,
+				  		old_error_time = 0,
+				  		current_errline = 1,
+				  		thisfile_errline = 0,
+						done_err=0,
+						from_assem=0,
+						warn_flag=0,
+						cut_point=0;
+
+
+	assign_to_key ("<Left>", "prev_char");
+	assign_to_key ("<Right>", "next_char");
+	assign_to_key ("<Backspace>", "real_backspace");
+//	assign_to_key ("<Ctrl-Left>", "left");
+//	assign_to_key ("<Ctrl-Right>", "right");
+	assign_to_key ("<Alt-S>", "writeall_buffer");
+	assign_to_key ("<Ctrl-G>", "find_label");
+	assign_to_key ("<Ctrl-F>", "undo_find_label");
+	assign_to_key ("<Alt-B>", "buf_list 1");
+	assign_to_key ("<Ctrl-D>","set_bug");
+	assign_to_key ("<Ctrl-F10>", "run_bug");
+	assign_to_key ("<Ctrl-F9>", "get_prjfiles");
+	assign_to_key ("<Alt-F9>","main_menu");				  
+	assign_to_key ("<Ctrl-N>","Snmkerr");
+	assign_to_key ("<Ctrl-Q>","err_window");
+	assign_to_key ("<Ctrl-E>","run_eval");
+	assign_to_key	("<Ctrl-A>","assem_thisfile");
+
+	_find_label_init();
+
+
+}
+			
+main_menu()
+
+{
+
+	global int prjerr_flag=0;
+	global int master_switch=0;
+	global int mainmen_left,mainmen_right,mainmen_top,mainmen_bot;
+	global int SNIF=100,TEMP=101;
+
+	int scrn_lines,scrn_cols,menu_buf;
+	int oldbuffer,pickno,linenum=0,MENITEMS=0;
+	string pickstr,menufile,tstr;
+
+	oldbuffer=inq_buffer();
+
+
+	menufile=inq_environment("BHELP")+"\\snmk0.mnu";
+
+	if(!(menu_buf=create_buffer("snasm",menufile,1))){
+		beep();
+		error("Unable to create menu buffer");
+		_exit();
+	}
+
+	set_buffer(menu_buf);
+
+	end_of_buffer();						// discover number of lines in menu
+	inq_position(MENITEMS);				// file
+
+	move_abs(12,1);
+
+	linenum=12;
+
+	while(down()){						// if more than 12 menu items look thru
+		linenum++;							// them assigning their line number
+												// to the constants we want
+		switch(tstr=ltrim(trim(substr(read(),1,21)))){	
+								
+			case "Snif":
+				SNIF=linenum;
+
+			case "Temp":
+				TEMP=linenum;
+
+			default:
+				break;
+		}
+	}
+
+	set_buffer(oldbuffer);
+
+	inq_screen_size(scrn_lines,scrn_cols);	// get this info so we dont menu
+														// out of our screen
+	mainmen_left=(scrn_cols/2-10);
+	mainmen_right=mainmen_left+20;
+
+	mainmen_top=5;
+	if(MENITEMS+6>=scrn_lines-5)
+		mainmen_bot=scrn_lines-5;
+	else
+		mainmen_bot=6+MENITEMS;
+
+
+	_process_menu(mainmen_left,mainmen_bot,mainmen_right,mainmen_top,"snasm",
+						"",NULL,menu_buf,"main_action",TRUE,pickno,pickstr);
+
+
+	if(inq_buffer()!=oldbuffer)
+		if(!prjerr_flag)				// flag set by error routines which move
+			set_buffer(oldbuffer);  // buffers around; if so leave them to it
+
+	if(master_switch)
+		switch(master_switch){
+
+			case DOMAKE:
+				snmk_run();
+
+			case DOSEL:
+				get_prjfiles();
+
+			case THISASSEM:
+				assem_thisfile();
+
+			case DODEBUG:
+				run_bug();
+
+			case DOEVAL:
+				run_eval();
+
+			case DOLABEL:
+				find_label();
+
+			case LASTLAB:
+				undo_find_label();
+
+			case SAVEALL:
+				writeall_buffer();
+
+			case ERRWIN:
+				err_window();
+
+			case NXTERR:
+				Snmkerr();
+
+			case VERSION:
+				show_version();			
+
+// the case statement below calls the snif program if it has been installed.
+// If not it will not appear on the SNASM menu within Brief anyway. 	
+
+			case SNIF:
+				do_snif();
+
+// do_temp is a do nothing function left in as a place marker for install
+// programs upgrading the SNASM system : if this function is removed the 
+// risk is run of confusing such programs. 
+
+			case TEMP:
+				do_temp();
+		
+			default:
+				error("Bad value in global master_switch");
+
+		}
+
+	delete_buffer(menu_buf);	
+
+}
+
+main_action(int event_type,int pickno,string pickstr)
+
+{
+	int leave=0;
+	global int dontpush=0;
+
+
+	if(event_type==DIALOG_ESCAPE)
+			return(TRUE);
+
+	if(event_type==DIALOG_PICK_MENU){
+		switch(pickno){
+
+			case 1:
+				master_switch=DOMAKE;
+
+			case 2:
+				master_switch=DOSEL;
+
+			case 3:
+				master_switch=THISASSEM;
+
+			case 4:
+				master_switch=DODEBUG;
+
+			case 5:
+				set_bug();
+
+			case 6:
+				master_switch=DOEVAL;
+
+			case 7:
+				master_switch=DOLABEL;
+
+			case 8:
+				master_switch=LASTLAB;
+
+			case 9:
+				master_switch=SAVEALL;
+
+			case 10:
+				master_switch=ERRWIN;
+
+			case 11:
+				master_switch=NXTERR;
+
+			case 12:
+				master_switch=VERSION;				
+														
+			default:									// allows us to extend the menu
+				master_switch=pickno;			// without having to put the new
+		}												// items in a specific order
+
+		if(!dontpush)					 			// flag used to indicate if the 
+			push_back(key_to_int("<Esc>"));	// menu is to disappear straight
+														// away
+		return(TRUE);
+	}
+
+	
+}	
+
+set_bug()
+
+{
+	int menubuff,oldbuffer,linepick;
+	int mleft,mtop,mright,mbottom;
+	string picked_file;
+	
+
+	menubuff=create_buffer("sndebug",NULL,1);
+	oldbuffer=set_buffer(menubuff);
+	
+	insert("      On      \n");
+	insert("      Off     ");	
+
+	if(!strlen(Debugstr))
+			push_back(key_to_int("<Down arrow>"));
+
+
+	mleft=mainmen_left+15;
+	mtop=mainmen_top+SETBUG;
+	mright=mainmen_left+30;
+	mbottom=mainmen_top+SETBUG+3;
+
+	_process_menu(mleft,mbottom,mright,mtop,
+							"sndebug","",NULL,menubuff,
+								"setbug_action",TRUE,linepick,picked_file);
+ 
+	set_buffer(oldbuffer);
+	delete_buffer(menubuff);
+	
+}
+
+setbug_action(int event_type,int line,string filename)
+
+{
+
+		if(event_type==DIALOG_ESCAPE){
+			dontpush=1;
+			return(TRUE);
+		}
+
+		if(event_type==DIALOG_PICK_MENU){
+			toggle_bug(line);
+			push_back(key_to_int("<Esc>"));
+			return(TRUE);		  	
+		}
+	
+
+}
+
+toggle_bug(int line)
+
+{
+
+	if(line==1)
+		Debugstr="/d";
+	else
+		Debugstr="";
+
+}
+
+get_prjfiles(void)
+
+{
+
+	int oldbuffer,prjbuffer,numfiles=0,linepick,max_h,a;
+	int tempbuff,default_buff,i,j,save_men_pos=0,inloop=TRUE;
+	int orig_line,orig_col,posn1,posn2,chop_len,col_posn;
+	int curr_buf,old_buf,tbuff;
+	string tempstr,t1str,tprjstr;
+	string name,picked_file;
+	global int by,ty,setandexecute=0,displayprjflag=FALSE;
+	global string current_str;
+
+
+	edit_buffer=0;
+	inq_position(orig_line,orig_col);
+
+	prjbuffer=create_buffer("prjfiles",NULL,1);
+
+	file_pattern("*.prj");
+	oldbuffer=set_buffer(prjbuffer);
+
+//Create buffer of any files ending in '.prj' that are currently held in
+// buffers and do not delete them later after creating the project file
+// window
+
+
+	tbuff=create_buffer("tbuff",NULL,1);
+
+	curr_buf=inq_buffer();
+
+	/* 																							 */
+	/* 		This loop goes through the buffer list, and stops when			 */
+	/* 	all non-system buffers have been checked. 								 */
+
+	while(!(curr_buf == old_buf)){
+		if (!old_buf)
+			old_buf=curr_buf;
+		inq_names(tempstr,tprjstr);
+		if (tprjstr=="prj"){
+/* 																					 	*/
+/* 		If the current buffer holds  a project file put its name in */
+/* 		the temporary buffer													 */
+/* 																					 */
+
+			inq_names("","",tprjstr);
+			set_buffer(tbuff);
+//			bottom_of_buffer();
+			insert(tprjstr);
+			set_buffer(curr_buf);	
+
+		}
+
+		/* 																						 */
+		/* 		When we go to the next buffer, we ask next buffer for 		 */
+		/* 	all of the buffers, not just non-system.	This way, if we		 */
+		/* 	started with a system buffer, we don't infinite loop. 			 */
+		/* 																						 */
+
+		set_buffer (curr_buf = next_buffer (1));
+	}
+
+	if (old_buf)
+		set_buffer (old_buf);
+
+	while(find_file(name)){
+
+		numfiles++;										// keep track of number of files
+		snm_insert_sorted(name,1,numfiles);		// insert them sorted
+		tempbuff=create_buffer("tempbuf",name,0);	// get this file
+		set_buffer(tempbuff);
+		top_of_buffer();
+		t1str=read(55);									// read first 55 chars
+		if(!(chop_len=index(t1str,"\n")))
+			chop_len=strlen(t1str);
+		else
+			chop_len--;
+		tempstr=substr(t1str,1,chop_len);	// loose the newline character 
+		set_buffer(prjbuffer);
+		top_of_buffer();
+		search_fwd("<"+name);
+		end_of_line();
+		inq_position(NULL,col_posn);			// pad out to col 14 wit spaces
+		while(col_posn<14){
+			insert(" ");
+			inq_position(NULL,col_posn);
+		}	
+		insert(" : ");
+		if(tempstr!="\n")
+			insert(tempstr);
+		set_buffer(tbuff);					// buffer we read the .prj files into
+		top_of_buffer();
+		if(!(search_fwd(name,0)))
+			delete_buffer(tempbuff);		// ensure we do not delete project
+		set_buffer(prjbuffer);				// buffers we are looking at at the
+													// moment																						 
+	}
+
+	delete_buffer(tbuff);
+
+	tbuff=set_buffer(prjbuffer);
+	end_of_buffer();
+	delete_line();							// loose trailing newline to prevent
+	set_buffer(tbuff);					// scrolling off end of project menu
+
+	if(numfiles){
+
+		top_of_buffer();
+		i=1;
+		while(i<=numfiles){
+			t1str=read();
+			down();
+			if((posn1=index(t1str,"\n"))<(posn2=index(t1str," ")))
+				posn2=posn1;
+			tempstr=substr(t1str,1,posn2-1);
+			if(tempstr==Prjname){
+				for(j=1;j<i;j++)
+					push_back(key_to_int("<Down arrow>"));
+				break;
+			}
+			i++;
+		}
+		
+		inq_screen_size(max_h);
+		ty=4;
+
+		if((by=ty+(numfiles+1))>max_h)
+			by=ty;
+
+		_process_menu(5,by,75,ty,".prj files","",NULL,prjbuffer,"snmk_action",
+										TRUE,linepick,picked_file);
+
+	}else{
+		beep();
+		message("No project files found in this directory");
+	}
+
+	if(displayprjflag){			// we want to display a project file and
+		set_defprj();				// select it if this flag is set
+		display_prj();				 
+	}else{
+		if(setandexecute==1){
+			set_buffer(oldbuffer);
+			delete_buffer(prjbuffer);
+			set_ex();
+		}
+		if(!prjerr_flag){			// set in the error tracing routines which move
+			if(edit_buffer){		// buffers around :  so leave them to it
+				edit_file(Prjname);
+				goto_line(snmerr_line);
+				message(snmerr_err);
+			}else{	
+				set_buffer(oldbuffer);
+				move_abs(orig_line,orig_col);
+			}
+		}else if(!change_back){
+				edit_file(current_errfile);
+				goto_line(thisfile_errline);
+				a =strlen(current_str);
+				error(substr(current_str,cut_point,a-cut_point));
+		}
+	}
+
+}	  
+
+snmk_action(int event_type,int line,string filename)
+
+{
+		
+
+		if(event_type==DIALOG_ESCAPE)
+			return(TRUE);
+
+		if(event_type==DIALOG_PICK_MENU){
+			snmk_level2(filename,line);
+			return(TRUE);		  	
+		}
+
+
+}								
+
+snmk_level2(string filename,int linenum)
+
+{
+	int pickno;
+	int a,b;
+	string pickstr;
+	string temp;
+	global string fname;
+	int lev2buffer,oldbuffer,menu_buf;
+	
+	a=index(filename," ");
+	b=index(filename,"\n");
+	
+	if(a<b || b==0)
+		fname=substr(filename,1,index(filename," ")-1);
+	else
+		fname=filename;
+	
+	if(!(menu_buf=create_buffer("menu",NULL,1))){
+		beep();
+		error("Unable to create menu buffer");
+		return(FALSE);
+	}
+
+	oldbuffer=set_buffer(menu_buf);
+	insert("    Select this file\n");
+	insert("    Select and Make\n");	
+	insert("   Show comment lines\n");
+	insert("    Edit and select");
+
+	set_buffer(oldbuffer);
+	
+
+	_process_menu(50,ty+linenum+5,75,ty+linenum,"snmake",NULL,NULL,menu_buf,
+								"snmk_action2",TRUE,pickno,pickstr);
+
+	return(TRUE);
+
+	set_buffer(oldbuffer);
+	delete_buffer(menu_buf);
+	
+
+}
+
+snmk_action2(int event_type,int line,string name)
+
+{
+
+	int i;
+	global int type_switch=1;
+
+	if(event_type==DIALOG_ESCAPE)
+		return(TRUE);
+
+	if(event_type==DIALOG_PICK_MENU){
+		switch(line){
+
+			case 1:
+				set_defprj();
+
+			case 2:
+				set_exset();	// set up two flags here to delay execution
+									// of function until menu has gone
+			case 3:
+				display_info();
+
+			case 4:
+				displayprjflag=TRUE;				
+
+			default:
+				error("Menu error");
+		}
+
+		if(type_switch==1)
+			push_back(key_to_int("<Esc>"));
+		return(TRUE);
+	}
+
+}
+	
+
+display_info()
+
+{
+
+	int	saved_level = _dialog_level;
+	int c,lineno=0,i;
+	int hiy,loy;
+	string newstr,tempstr,tprjstr;
+	int wbuffer,tbuff,curr_buf,old_buf;
+	int oldbuffer,tempbuffer;
+	int localkey;
+	
+
+//Create buffer of any files ending in '.prj' that are currently held in
+// buffers and do not delete them later after creating the project file
+// window
+
+
+	tbuff=create_buffer("tbuff",NULL,1);
+
+	curr_buf=inq_buffer();
+
+	/* 																							 */
+	/* 		This loop goes through the buffer list, and stops when			 */
+	/* 	all non-system buffers have been checked. 								 */
+
+	while(!(curr_buf == old_buf)){
+		if (!old_buf)
+			old_buf=curr_buf;
+		inq_names(tempstr,tprjstr);
+		if (tprjstr=="prj"){
+/* 																					 	*/
+/* 		If the current buffer holds  a project file put its name in */
+/* 		the temporary buffer													 */
+/* 																					 */
+
+			inq_names("","",tprjstr);
+			set_buffer(tbuff);
+//			bottom_of_buffer();
+			insert(tprjstr);
+			set_buffer(curr_buf);	
+
+		}
+
+		/* 																						 */
+		/* 		When we go to the next buffer, we ask next buffer for 		 */
+		/* 	all of the buffers, not just non-system.	This way, if we		 */
+		/* 	started with a system buffer, we don't infinite loop. 			 */
+		/* 																						 */
+
+		set_buffer (curr_buf = next_buffer (1));
+	}
+
+
+	tempbuffer=create_buffer("temp",fname,0);
+
+	oldbuffer=set_buffer(tempbuffer);
+
+	wbuffer=create_buffer("comments",NULL,0);
+
+	do{
+	
+		newstr=read();
+		set_buffer(wbuffer);
+		insert("%s",newstr);
+		lineno++;
+		set_buffer(tempbuffer);
+		down();
+		
+	}while(!(search_string("[SnMake]",newstr,0,0,0)) 
+									&& (!inq_position()) && (lineno<20));
+
+	if(newstr==""){
+		message("File %s will fail in \"Prjmode\"");
+		push_back(key_to_int("<Keypad minus>"));
+		return(TRUE);
+	}
+
+	hiy=4+lineno+2;
+	
+	if(hiy<by)
+		hiy=by+3;
+	
+	set_buffer(wbuffer);
+	top_of_buffer();
+	create_window(2,hiy,76,ty,"<ESC> to quit < Keypad - > for menu");
+	attach_buffer(wbuffer);
+  	refresh();
+
+	keyboard_push ();
+
+	assign_to_key("<Keypad-minus>","my_exit");
+	assign_to_key("<Esc>","_exit");
+	
+	refresh();
+	process();
+	
+	set_buffer(oldbuffer);	
+	delete_window();
+	set_buffer(tbuff);					// buffer we read the .prj files into
+	top_of_buffer();
+	if(!(search_fwd(fname,0)))
+		delete_buffer(tempbuffer);		// ensure we do not delete project
+
+//	delete_buffer(tempbuffer);
+	delete_buffer(wbuffer);
+	delete_buffer(tbuff);
+	set_buffer(oldbuffer);
+
+	keyboard_pop (1);
+
+	return(TRUE);
+
+
+
+}
+
+display_prj()
+
+{
+	attach_buffer(create_buffer(lower(fname),fname,0));
+	
+	return(TRUE);
+
+}
+		 
+
+leave_level(void)
+
+{
+
+	push_back(key_to_int("<Keypad-minus>"));
+	return;
+}
+
+my_exit(void)
+
+{
+	type_switch=0;
+	_exit();
+
+}
+		
+set_defprj()
+
+{
+
+
+	Prjname=fname;
+
+}
+
+set_exset()
+
+{
+
+	type_switch=1;
+	setandexecute=1;
+
+}
+
+
+set_ex()
+
+{
+
+	set_defprj();
+	writeall_buffer();
+	go_exec();
+
+}
+
+go_exec()
+
+{
+	int ret_val=0,new_buf;
+	int j,this_win;
+	string name;
+
+	from_assem=1;
+	current_errline=0;				// ensure error variables are set to 
+	current_errfile="";				// null values
+	type_of_err="";
+	
+
+	make_cmdline();
+	if((ret_val=dos(ltrim(cmdline),0))!=0){ // SnMake returns a 1 on error and
+		if(ret_val==1){						//adds 1 to any other error codes
+			do_snmerr();						// thus allowing us to determine if
+		}else if(ret_val>0){									// an error originates from SnMake
+			done_err=0;							// unset error window flag 		
+			Snmkerr();
+		}else{
+			name=substr(cmdline,1,index(cmdline," "));
+
+			switch(ret_val){
+
+				case -2:
+					error("Error - command %s not found",name);
+				case -3:
+					error("Error - path %s not found",name);
+				case -4:
+					error("Error - too many open files from DOS");
+				case -5:
+					error("Error - %s access denied",name);
+				case -8:
+					error("Error - insufficient memory to shell to DOS");
+				case -15:
+					error("Error - %s - invalid drive specified");
+
+			}
+		}
+	}else
+		message("Success");
+
+	from_assem=0;
+
+}
+
+
+do_snmerr()
+
+{
+
+	int	saved_level = _dialog_level,a,b;
+	int c,lineno=0;
+	int hiy,loy,hix;
+	string newstr,tempstr,t1str;
+	int ebuffer,templine;
+	int oldbuffer,tempbuffer;
+	int localkey,second_colon;
+	
+
+	tempbuffer=create_buffer("temp",SnErrors,0);
+
+	oldbuffer=set_buffer(tempbuffer);
+
+	ebuffer=create_buffer("SnMake Errors",NULL,0);
+
+	while(!inq_position()){
+	
+		newstr=read();
+		if((tempstr=substr(newstr,1,6))=="SnMake")
+			 if(!index(newstr,"Error")){
+				down();
+				lineno++;
+				continue;
+		}
+		set_buffer(ebuffer);
+		insert(newstr);
+		if(strlen(newstr)>72){
+			inq_position(templine);
+			move_abs(templine-1,70);
+			while(1){
+				if(prev_char()==0)		// if so at top of buffer
+					break;
+				t1str=read(1);
+				if(t1str==" "){
+					next_char();
+					insert("\n");
+					break;
+				}
+			}
+		}
+		lineno++;
+		t1str=newstr;
+		search_string("*:*:",newstr,second_colon,1,0);
+		snmerr_err=substr(newstr,second_colon+2,index(newstr,"\n")-second_colon-2);
+		a=index(t1str,"(");
+		b=index(t1str,")");
+		tempstr=substr(t1str,a+1,b-a-1);
+		snmerr_line=atoi(tempstr);
+		b=index(t1str,"File")+5;
+		ErrorPrj=substr(t1str,b,second_colon-b-1);
+		break;
+	}
+
+
+	inq_screen_size(hiy,hix);
+
+	if(by==0)
+		by=8;
+	if(ty==0)
+		ty=3;
+
+	top_of_buffer();
+
+//	if(!(search_fwd("[a-z][A-Z][0-9]",1,0,0,0))){
+
+		create_window(2,by+2,hix-4,ty,"<ESC> to quit     E to edit file");
+		attach_buffer(ebuffer);
+ 	 
+
+		keyboard_push ();
+
+		assign_to_key("<Esc>","_exit");
+		assign_to_key("<E>","edit_buf");
+		assign_to_key("<e>","edit_buf");
+	
+		refresh();
+		process();
+	
+	
+		delete_window();
+
+//	}
+
+	set_buffer(oldbuffer);
+	delete_buffer(tempbuffer);
+	delete_buffer(ebuffer);
+
+	keyboard_pop (1);
+
+	return(TRUE);
+
+
+}
+
+make_cmdline()
+
+{
+	string Flags=Infostr+Debugstr+Filestr+Quietstr+Prjstr+Macstr+Allstr;
+
+	cmdline="snmake "+Flags+" "+Prjname+" "+Errorfile+" >& err.tmp";
+
+}
+
+edit_buf()
+
+{
+	 edit_buffer=1;
+	 _exit();
+}
+	
+
+
+replacement _save_state (int cur_buf)
+
+{
+
+	int ebuffer=0;
+
+
+ 	if(strlen(Prjname)){
+
+		insert("[SnMake-.prjfile]\n");
+		insert(Prjname);
+		insert("\n");
+		insert(Infostr);
+		insert("\n");
+		insert(Debugstr);
+		insert("\n");
+		insert(Quietstr);
+		insert("\n");
+		insert(Prjstr);
+		insert("\n");
+		insert(Macstr);
+		insert("\n");
+		insert(Filestr);
+		insert("\n");
+		insert(Allstr);
+		insert("\n");
+		insert(pre_fname);
+		insert("\n");
+		insert(after_fname);
+		insert("\n");
+		insert("[End-SnMake-.prjfile]\n");
+
+	}
+
+	if(ebuffer=inq_buffer("errors.err"))
+		delete_buffer(ebuffer);
+
+	file_pattern("errors.err");
+	if(find_file())
+		del("errors.err");
+
+	file_pattern("snmk.err");
+	if(find_file())
+		del("snmk.err");
+
+	file_pattern("err.tmp");
+	if(find_file())
+		del("err.tmp");
+
+
+	returns (_save_state());
+
+}
+
+replacement _restore ()
+
+{
+	string tmp;
+	int i;
+
+ 	_restore();
+	top_of_buffer();
+
+	if(search_fwd("\\[SnMake-.prjfile\\]")){
+
+		down();
+		tmp=read();
+		if(i=(index(tmp,"\n")-1))
+			Prjname=substr(tmp,1,i);
+		down();
+		tmp=read();
+		if(i=(index(tmp,"\n")-1))
+			Infostr=substr(tmp,1,i);
+		down();
+		tmp=read();
+		if(i=(index(tmp,"\n")-1))
+			Debugstr=substr(tmp,1,i);
+		down();
+		tmp=read();
+		if(i=(index(tmp,"\n")-1))
+			Quietstr=substr(tmp,1,i);
+		down();
+		tmp=read();
+		if(i=(index(tmp,"\n")-1))
+			Prjstr=substr(tmp,1,i);
+		down();
+		tmp=read();
+		if(i=(index(tmp,"\n")-1))
+			Macstr=substr(tmp,1,i);
+		down();
+		tmp=read();
+		if(i=(index(tmp,"\n")-1))
+			Filestr=substr(tmp,1,i);
+		down();
+		tmp=read();
+		if(i=(index(tmp,"\n")-1))
+			Allstr=substr(tmp,1,i);
+		down();
+		tmp=read();
+		if(i=(index(tmp,"\n")-1))
+			pre_fname=substr(tmp,1,i);
+		down();
+		tmp=read();
+		if(i=(index(tmp,"\n")-1))
+			after_fname=substr(tmp,1,i);
+
+	}
+
+}
+
+
+sn_finderr(int lineno)
+
+{
+		goto_line(lineno);
+		if(inq_position()){
+			at_endof_buf+=1;
+			lineno=-1;
+		}else{
+			current_str=read();
+			lineno++;
+			current_errline++;
+
+			find_err_type(current_str);
+
+			goto_error(current_str,1);
+		}
+	
+		return(lineno);
+
+}
+
+/* 	This macro searches for the label under the cursor in the current 	 */
+/* 	buffer. A label is defined as any string containing the characters	 */
+/* 	"0-9","A-Z","a-z" or "#!_." and not starting with a numeral.			 */
+/* 	If the cursor is over a label at the beginning of a line then			 */
+/* 	searching starts from the current position else it starts from the	 */
+/* 	beginning of the buffer.															 */
+
+#define numeric		 "[0-9]"
+#define notalabelchar "[~0-9A-Za-z#!._]"
+#define startoflabel  "<|{[~0-9A-Za-z@._]\\c}"
+#define endoflabel	 "[0-9A-Za-z#@._]+[~0-9A-Za-z#@._]"
+#define startofline	 "<"
+
+
+find_label (...)
+{
+	int retval,
+		 line,
+		 column,
+		 curbuf,
+		 oldbuf,
+		 foundflag;
+
+	string filename,
+			 searchfile,
+			 labelstr,
+			 searchstr;
+
+	if (!search_string ("[0-9A-Za-z#@!._]", read (1))){
+//		error ("Cursor is not on a label");
+		save_position ();
+		get_parm(0,labelstr,"Input label : ");
+	}else{
+//		
+		save_position ();
+		search_back (startoflabel);
+		labelstr = read (search_fwd (endoflabel) - 2);
+	}
+/* On a 68000 we need to make a leading @ literal and drop a leading # */
+		switch (substr (labelstr, 1, 1))
+		{
+			case "#":
+				labelstr = substr (labelstr, 2);
+			case "@":
+				labelstr = "\\" + labelstr;
+		}
+
+		message("Searching....");
+
+		if (search_string (numeric, substr (labelstr, 1, 1)))
+			{
+			error ("Cursor is not on a label");
+			restore_position ();
+			}
+		else
+			{
+			searchstr = (startofline + labelstr) + notalabelchar;
+			inq_position (line, column);
+			inq_names (filename);
+			if (column != 1)
+				top_of_buffer ();
+			else
+				next_char ();
+			retval = search_fwd (searchstr);
+			if (!retval)
+				{
+				restore_position ();
+
+				/*  Search rest of buffers 												 */
+				oldbuf = inq_buffer ();
+				set_buffer (curbuf = next_buffer (1));
+				while (!foundflag && !(curbuf == oldbuf))
+					{
+					if (! inq_system () )
+						{
+						inq_names ( NULL, NULL, searchfile);
+						searchfile = (labelstr + " in ") + searchfile;
+						message ("Searching for label %s",searchfile);
+						save_position ();
+						top_of_buffer ();
+						retval = search_fwd (searchstr);
+						if (retval)
+							{
+							restore_position (0);
+							foundflag = -1;
+							}
+						else
+							{
+							restore_position ();
+							set_buffer (curbuf = next_buffer (1));
+							}
+						}
+					else
+						{
+						set_buffer (curbuf = next_buffer (1));
+						}
+					}
+				if (foundflag)
+					{
+					display_file_name ();
+					attach_buffer (curbuf);
+					_fl_insert_pos (line,column,filename);
+					}
+				else
+					error ("Label %s not found", labelstr);
+				}
+			else
+				{
+				restore_position (0);
+				message ("");
+				_fl_insert_pos (line, column, filename);
+				}
+			}
+		
+}
+
+int snasmerr(string new_line,int warn)
+
+{
+
+	int 		linenum_start,
+		 		linenum_end,
+		 		file_start,
+		 		file_end,
+				gotone=1,
+				temp;
+
+
+	if(warn && from_assem){
+		if(search_string("{: Warning :}",new_line,NULL,1,0)){
+			warn_flag=1;
+//			gotone=0;
+		}
+	}else if(warn){
+		if(search_string("<{Warning}",new_line,NULL,1,0)){
+			gotone=0;
+		}
+	}
+
+	if(search_string("<{Error}",new_line,NULL,1,0)){
+		gotone=0;
+	}
+
+	if(!gotone){
+		if(!warn_flag)
+			do_error_window=1;
+		return(0);
+	}
+
+	gotone=1;
+
+	if(warn){
+		if(!(index(new_line,": Warning :"))) // i.e. they are just comments
+			gotone=0;
+
+	}else if(!(index(new_line,": Error :")) && // i.e. they are just comments
+						substr(new_line,1,21)!="Unexpected characters")	
+		gotone=0;
+
+	if(!gotone)
+		return(0);
+
+
+	linenum_start=index(new_line,"(")+1;
+	linenum_end=index(new_line,")")-1;
+	
+	if(linenum_start==1){
+		do_error_window=1;
+		return(0);
+	}
+
+	thisfile_errline=atoi(substr(new_line,linenum_start,linenum_end));
+
+	file_end=index(new_line,"(")-1;
+
+	current_errfile=substr(new_line,1,file_end);
+
+	temp=index(new_line,":")+1;
+	cut_point=index(substr(new_line,temp),":")+temp+1;
+
+	go_next_error=1;
+
+	return(0);
+
+}
+/* 																								 */
+/*  Initialise find_label's buffers and global vriables							 */
+/* 																								 */
+
+_find_label_init (...)
+{
+	int _fndlabbuf,
+		 _numflbentry;
+
+	global _fndlabbuf,
+			 _numflbentry;
+
+	_fndlabbuf = create_buffer ("FINDLABELBUF", NULL, 1);
+}
+
+show_version()
+
+{
+	message("Snasm macros version %s",VERSION_NO);
+
+}				
+
+do_snif()
+
+{
+
+	dos("snif >&nul",0);
+
+}
+
+do_temp()
+
+{
+	message("Hello from temp");
+
+}
+

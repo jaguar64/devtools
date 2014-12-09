@@ -1,0 +1,1441 @@
+#include <dialog.h>
+		
+extern current_errline;
+extern error_buffer;
+extern change_back;
+extern current_errfile;
+extern thisfile_errline;
+// extern go_next_error;
+// extern do_error_window;
+// extern runerr_flag;
+extern prjerr_flag;
+extern cut_point;
+extern current_str;
+extern at_endof_buf;
+extern type_of_err;
+extern Errorfile;
+extern old_error_date;
+extern old_error_time;
+extern Prjname;
+extern snmerr_line;
+extern snmerr_err;
+extern edit_buffer;
+extern done_err;	 
+extern go_exec();
+extern _exit();
+extern display_file_name();
+extern snasmerr(string,int);
+extern sn_finderr(int);
+extern warn_flag;
+extern pre_fname;
+extern after_fname;
+extern SNCMD;
+extern Debugstr;
+extern Infostr;
+
+extern _fndlabbuf;
+extern _numflbentry;
+
+string ext(string ,string);
+void get_prjfiles(); 
+
+// strip takes the string passed to it and removes all white space from
+// it, returning the stripped string to the calling function.It removes
+// any trailing newline characters it finds
+
+
+string strip(string tgt_str)
+
+{
+
+	int oldbuffer,tmpbuffer,tmp1buffer;
+	string tmp_str;
+
+	tmpbuffer=create_buffer("tmp",NULL,1);
+	tmp1buffer=create_buffer("tmp1",NULL,1);
+
+	oldbuffer=set_buffer(tmpbuffer);
+
+	tgt_str+="\n";
+
+	insert(tgt_str);
+
+	up();
+
+	beginning_of_line();
+
+	while((tmp_str=read(1))!="\n"){
+		
+		next_char();
+		if(tmp_str==" " || tmp_str=="\t")
+			continue;
+
+		set_buffer(tmp1buffer);
+		insert(tmp_str);
+		set_buffer(tmpbuffer); 	
+
+	}
+
+	set_buffer(tmp1buffer);
+	top_of_buffer();
+	tgt_str=read();
+
+	set_buffer(oldbuffer);
+	
+	delete_buffer(tmp1buffer);
+	delete_buffer(tmpbuffer);
+
+	return(substr(tgt_str,1,strlen(tgt_str)-1));
+
+}
+	
+snm_insert_sorted (string to_insert, int top, int bottom)
+
+{
+	if (top <=bottom)
+		{
+		string	line_text;
+
+		move_abs (bottom, 1);
+		line_text = read ();
+
+		if (line_text != "\n" && to_insert < line_text)
+			{
+			int	middle_line;
+
+			while (top < bottom)
+				{
+				middle_line = top + ((bottom - top) / 2);
+
+				move_abs (middle_line, 1);
+
+				if (to_insert < read ())
+					bottom = middle_line - 1;
+				else
+					top = middle_line + 1;
+				}
+			move_abs (top, 1);
+			line_text = read ();
+
+			if (line_text != "\n" && to_insert > line_text)
+				down ();
+			}
+		else if (line_text != "\n")
+			down ();
+		}
+	else
+		move_abs (top, 1);
+
+	insert (to_insert + "\n");
+}
+
+
+undo_find_label (...)
+{
+	int line,
+		 column,
+		 oldbuf,
+		 curbuf,
+		 foundflag;
+
+	string instr,
+			 tempstr;
+
+	if (_numflbentry)
+		{
+		curbuf = inq_buffer ();
+
+		set_buffer (_fndlabbuf);
+		top_of_buffer ();
+		instr = trim (read ());
+		delete_line ();
+
+		line = atoi (substr (instr, 1, 8));
+		column = atoi (substr (instr, 9, 8));
+		instr = substr (instr, 17);
+
+		/*  YEUK 																				 */
+		/* 	  (edit_file instr)															 */
+
+		/*  Search buffers																	 */
+		set_buffer (curbuf);
+		while (!foundflag && !(curbuf == oldbuf))
+			{
+			if (!oldbuf)
+				oldbuf = curbuf;
+			if (!inq_system ())
+				{
+				inq_names (tempstr);
+				tempstr = trim (tempstr);
+				if (tempstr == instr)
+					foundflag = -1;
+				else
+					set_buffer (curbuf = next_buffer (1));
+				}
+			else
+				set_buffer (curbuf = next_buffer (1));
+			}
+		if (foundflag)
+			{
+			display_file_name ();
+			attach_buffer (curbuf);
+			move_abs (line, column);
+			}
+		else
+			if (exist (instr))
+				{
+				edit_file (instr);
+				move_abs (line, column);
+				}
+			else
+				{
+				error ("Cannot find file %s", instr);
+				set_buffer (oldbuf);
+				}
+		--_numflbentry;
+		}
+	else
+		error ("Nothing to undo");
+}
+
+writeall_buffer (...)
+{
+	int curr_buf,
+		 old_buf,
+		 saved;
+
+	curr_buf = inq_buffer ();
+
+	message("Writing....");
+
+	/* 																							 */
+	/* 		This loop goes through the buffer list, and stops when			 */
+	/* 	all non-system buffers have been checked. 								 */
+
+	while (!(curr_buf == old_buf))
+		{
+		if (!old_buf)
+			old_buf = curr_buf;
+		if (inq_modified () && !inq_system ())
+			/* 																					 */
+			/* 		If the current buffer is modified, and is not a system	 */
+			/* 	buffer, we have to write it to disk.								 */
+			/* 																					 */
+
+			{
+			string pathname;
+
+			write_buffer ();
+			inq_names (pathname);
+			message ("Writing %s", pathname);
+			saved = saved + 1;
+
+			}
+
+		/* 																						 */
+		/* 		When we go to the next buffer, we ask next buffer for 		 */
+		/* 	all of the buffers, not just non-system.	This way, if we		 */
+		/* 	started with a system buffer, we don't infinite loop. 			 */
+		/* 																						 */
+
+		set_buffer (curr_buf = next_buffer (1));
+		}
+
+	if (old_buf)
+		set_buffer (old_buf);
+	switch (saved)
+	{
+		case 0:
+			error ("No buffers altered");
+		case 1:
+			message ("1 buffer written");
+		default:
+			message ("%u buffers written", saved);
+	}
+}
+
+_fl_insert_pos (...)
+{
+	int savebuf,
+		 column,
+		 line;
+
+	string outstr,
+			 filename;
+
+	savebuf = inq_buffer ();
+	set_buffer (_fndlabbuf);
+	top_of_buffer ();
+	get_parm (0, line);
+	get_parm (1, column);
+	get_parm (2, filename);
+	sprintf (outstr, "%8.8d%8.8d%s\n", line, column, filename);
+	insert (outstr);
+	if (_numflbentry == 32)
+		{
+		end_of_buffer ();
+		up ();
+		delete_line ();
+		}
+	else
+		++_numflbentry;
+	set_buffer (savebuf);
+}
+
+real_backspace (...)
+{
+	if (prev_char () > 0)
+		delete_char ();
+}
+
+
+
+
+
+
+
+
+errwin_exit()
+
+{
+
+	change_back=1;
+	_exit();
+
+}
+		
+
+find_err_type(string current_string)
+
+{
+
+	int 	 temp_indx;
+	string temp_str;
+
+	if(index(current_string,"SnMakeInfo")){	// Info left in the error file
+		temp_indx=index(current_string,"]");	// by SnMake for just this
+		temp_str=(lower(substr(current_string,24,temp_indx-24))); //purpose
+		switch(temp_str){
+				
+			case "snasm68k":
+				type_of_err="snasm";
+			case "snasm65":
+				type_of_err="snasm";
+			case "snasm658":
+				type_of_err="snasm";
+			case "snlnk68k":
+				type_of_err="snlnk";
+			case "snlink":
+				type_of_err="snlnk";
+			default:
+				type_of_err="unknown";
+		}
+	}
+}
+
+goto_error(string current_string,int warn)
+
+{
+
+	int do_wswitch=0,
+		 do_eswitch=0;
+
+	if(warn)
+		if(index(lower(current_string),"warning"))
+			do_wswitch=1;
+
+	if(index(lower(current_string),"error") || 
+									index(lower(current_string),"unexpected"))
+		do_eswitch=1;								// unexpected put in to cope
+														// with snasm command line
+														// error
+	if(do_wswitch || do_eswitch)
+		switch(type_of_err){
+			case "snasm":								
+				snasmerr(current_string,do_wswitch);
+			case "snlnk":
+				snlnkerr(current_string);
+			default:
+				generic_errsearch(current_string);
+		}
+
+}
+
+get_errbuff()
+
+{
+
+	int error_date,
+		 error_time,
+		 initial_buff,
+		 this_buff,
+		 foundflag=0;
+
+	string bufname;
+
+	file_pattern(Errorfile);			// any error buffers
+
+	message("");				// clear message line
+
+	if(!(find_file(NULL,NULL,error_date,error_time))){
+		error_date=0;
+		error_time=0;
+//		beep();
+//		error("Error : errorfile %s not found",Errorfile);
+		next_error();
+		return(1);
+	}
+
+		
+	initial_buff=inq_buffer();		//if we have a more up to date error
+	this_buff=initial_buff;			// buffer we must discover if we are
+											// editing the old one and if so remove
+	do{								// it before creating a new one
+
+		set_buffer(this_buff);
+		inq_names(NULL,NULL,bufname);
+
+		if(bufname=="error_buffer"){
+			foundflag=1;
+			break;
+		}
+
+	}while((this_buff=next_buffer(1))!=initial_buff);
+
+	if(foundflag)	
+		delete_buffer(error_buffer);
+
+	error_buffer=create_buffer("error_buffer",Errorfile,1);
+
+	old_error_date=error_date;
+	old_error_time=error_time;
+
+
+	if(!foundflag){
+		current_errline=0;
+		current_errfile="";
+		type_of_err="";
+	}
+	
+	return(0);		
+
+}
+
+
+
+snmk_run(void)
+
+{
+	global int runerr_flag=0;
+	global string ErrorPrj="";
+
+	int origbuffer;
+
+	edit_buffer=0;
+	origbuffer=inq_buffer();
+
+	if(!strlen(Prjname)){
+		message("No Project File selected");
+		get_prjfiles();
+		return(-1);
+	}else{
+		writeall_buffer();
+		go_exec();
+	}
+
+	if(!runerr_flag)			// set if we have come thru the error routines
+		if(edit_buffer){		// as they may swap buffers around we leave them
+			edit_file(ErrorPrj); 	// to it
+			goto_line(snmerr_line);
+			error(snmerr_err);
+		}else		
+			set_buffer(origbuffer);
+
+}
+	
+
+run_bug()
+
+{
+
+	int oldbuffer,prjbuffer,foundflag=FALSE,ret_code;
+	int curr_buf,old_buf=0,Delflag=TRUE,orig_line,orig_col;
+	string newstr,thisfile,extens;
+
+	oldbuffer=inq_buffer();
+
+	if(!strlen(Prjname)){						// if no project file selected
+		beep();									   // we cannot proceed
+		error("No project file selected");
+		return(1);
+
+	}
+
+	file_pattern(Prjname);						// look for current project file
+											// held in global string 'Prjname
+	if(!find_file()){
+		beep();
+		error("Unable to find project file %s",Prjname);
+		set_buffer(oldbuffer);
+		return(1);
+	}
+	curr_buf=inq_buffer();
+
+	while (!(curr_buf == old_buf)){		 // if we have the current .prj file
+													 // in the buffer list we set a flag	
+	if(!old_buf)								 // here to prevent us deleting it								
+		old_buf = curr_buf;				    // later
+		
+		set_buffer(curr_buf);
+		inq_names("","",thisfile);
+		if(lower(thisfile)==lower(Prjname))
+			Delflag=FALSE;
+	
+		curr_buf=next_buffer(1);		
+
+	}	
+
+	inq_names("",extens,thisfile);
+
+
+	if(extens=="prj" && thisfile==Prjname){
+		inq_position(orig_line,orig_col);
+		prjbuffer=create_buffer("tempprj",NULL,1);
+		goto_line(1);
+
+		while(!inq_position()){
+			newstr=read();
+			set_buffer(prjbuffer);
+			insert(newstr);
+			set_buffer(oldbuffer);
+			down();
+		}	
+
+		move_abs(orig_line,orig_col);
+
+	}else
+		prjbuffer=create_buffer("tempprj",Prjname,0);
+														 
+
+	set_buffer(prjbuffer);
+
+	top_of_buffer();
+
+	if(!search_fwd("[Debug]",0,0)){
+		beep();
+		error("No debug string set in project file");
+		set_buffer(oldbuffer);
+		if(Delflag)
+			delete_buffer(prjbuffer);
+		return(1);
+	}
+
+	while(!inq_position()){
+		down();
+		newstr=read();		 			// look for next non-null line after [Debug]
+		if(search_string("[~ \t\n]",newstr,0,1,0)){  
+			foundflag=TRUE;		// label; this is the command as it would
+			break;					// be issued from the command line
+		}
+	}
+
+
+	set_buffer(oldbuffer);
+	if(Delflag)
+		delete_buffer(prjbuffer);
+
+	if(!foundflag){
+		error("No valid Debugger command found");
+		return(1);
+	}
+
+	newstr=substr(newstr,1,index(newstr,"\n")-1)+" >&nul";
+
+	ret_code = dos(ltrim(newstr),0);
+	switch (ret_code){
+		case 0:
+			message ("Debugging successful.");
+		case 1:
+			error ("Syntax error in command line.");
+		case 2:					 
+			error ("Error with SCSI link.");
+		case 3:
+			error ("Error reading symbol file.");
+		case 4:
+			error ("Error in passed expression");
+		case 5:
+			error ("Debbuger error : unable to save state on exit");
+		case 6:
+			error ("Error user aborted restore");
+		case 7:
+			error ("Error SCSI card not found");
+		case 8:
+			error ("Link drivers not resident");
+		default:
+			error ("Unknown debugger error.");
+	}
+
+	return(0);
+
+}
+	
+run_eval()
+
+{
+
+	int oldbuffer,prjbuffer,tmpbuffer,ret_val=0,length;
+	int foundflag=FALSE,errorflag=FALSE,temp;
+	int orig_line,orig_col,first_len,sec_len;
+	int curr_buf,old_buf=0,Delflag=1,i;
+	string extens,first_str="",second_str="",thisfile;
+
+	string newstr,eval_str;
+
+	oldbuffer=inq_buffer();
+
+
+	if(!strlen(Prjname)){						// if no project file selected
+		beep();									   // we cannot proceed
+		error("No project file selected");
+		return(1);
+	}
+
+	file_pattern(Prjname);						// look for current project file
+											// held in global string 'Prjname
+	if(!find_file()){
+		beep();
+		error("Unable to find project file %s",Prjname);
+		return(1);
+	}
+
+	curr_buf=inq_buffer();
+
+	while (!(curr_buf == old_buf)){		 // if we have the current .prj file
+													 // in the buffer list we set a flag	
+	if(!old_buf)								 // here to prevent us deleting it								
+		old_buf = curr_buf;				    // later
+		
+		set_buffer(curr_buf);
+		inq_names("","",thisfile);
+		if(lower(thisfile)==lower(Prjname))
+			Delflag=FALSE;
+	
+		curr_buf=next_buffer(1);		
+
+	}	
+
+	inq_names("",extens,thisfile);
+
+
+	if(extens=="prj" && thisfile==Prjname){
+		inq_position(orig_line,orig_col);
+		prjbuffer=create_buffer("tempprj",NULL,1);
+		goto_line(1);
+
+		while(!inq_position()){
+			newstr=read();
+			set_buffer(prjbuffer);
+			insert(newstr);
+			set_buffer(oldbuffer);
+			down();
+		}	
+
+		move_abs(orig_line,orig_col);
+
+	}else
+		prjbuffer=create_buffer("tempprj",Prjname,0);
+
+	set_buffer(prjbuffer);
+
+	top_of_buffer();
+
+	if(!search_fwd("[Eval]",0,0)){
+		beep();
+		error("No valid Evaluate string set in project file");
+		set_buffer(oldbuffer);
+		return(1);
+	}
+
+	while(!inq_position()){
+		down();
+		newstr=read();		 			// look for next non-null line after [Eval]
+		if(search_string("[~ \t\n]",newstr,0,1,0)){  
+			foundflag=TRUE;		// label; this is the command as it would
+			break;					// be issued from the command line
+		}
+	}
+
+
+	set_buffer(oldbuffer);
+	if(Delflag)
+		delete_buffer(prjbuffer);
+
+	if(!foundflag){
+		error("No valid Evaluate command found");
+		return(1);
+	}
+	
+	if((first_len=index(newstr,"$$$")-1)!=-1){
+		sec_len=first_len+4;
+		if(sec_len>strlen(newstr))
+			sec_len=strlen(newstr);
+		first_str=substr(newstr,1,first_len);
+		second_str=substr(newstr,sec_len);
+	}else
+		first_str=newstr;	
+		
+
+	if(inq_marked()){
+		copy();
+		temp=inq_scrap();
+		tmpbuffer=set_buffer(temp);	
+		eval_str=read();
+		set_buffer(tmpbuffer);
+	}else{
+		 if(!get_parm(0,eval_str,"Input expression : ",40))
+			return(0);
+		eval_str=strip(eval_str);	
+	}
+
+	if(rindex(eval_str,"\n")==strlen(eval_str))			// cut off trailing
+		eval_str=substr(eval_str,1,strlen(eval_str)-1);		// newline if exists
+	if(rindex(first_str,"\n")==strlen(first_str))			// cut off trailing
+		first_str=substr(first_str,1,strlen(first_str)-1);	// newline if exists
+	if(rindex(second_str,"\n")==strlen(second_str))			// cut off trailing
+		second_str=substr(second_str,1,strlen(second_str)-1);// newline if exists
+
+	newstr=(trim(substr(first_str,1)))+trim(eval_str)+second_str+" >&t1.$$$";
+
+	message(ltrim(newstr));
+	for(i=0;i<1000;i++)
+		;
+
+	ret_val=dos(ltrim(newstr),0);
+
+	if(ret_val){
+		beep();
+		error("Evaluation error");
+		errorflag=TRUE;
+	}
+
+	file_pattern("t1.$$$"); 		
+	if(!find_file()){
+		beep();
+		error("Evaluation error");
+		errorflag=TRUE;
+	}
+
+	if(!errorflag){
+
+		tmpbuffer=create_buffer("tmpbuf","t1.$$$",1);
+
+		set_buffer(tmpbuffer);
+
+		top_of_buffer();
+
+		newstr=read();
+
+		if(!strlen(newstr)){
+			beep();
+			error("Evaluation error");
+			errorflag=TRUE;
+		}
+	}
+
+	if(!errorflag)
+		message("Result : %s",substr(newstr,1,strlen(newstr)-1));	
+
+	if(inq_buffer()!=oldbuffer || oldbuffer != prjbuffer) 
+		set_buffer(oldbuffer);
+
+	if(!errorflag)
+		delete_buffer(tmpbuffer);
+	
+	del("t1.$$$");
+
+	return(0);
+
+}
+
+
+
+
+Snmkerr()
+
+{
+
+	global int 					   
+				  go_next_error=0,
+				  do_error_window=0;
+
+	int error_date,
+		 error_time,
+		 do_window=0,
+		 initial_buff,
+		 this_buff,
+		 lineno=1,
+		 a,b,
+		 foundflag=0,
+		 original_buffer,
+		 temp_indx,
+		 thisfile,old_wind,last_wind,
+		 this_wind,changed,buffer;
+
+	string bufname,
+			 temp_str;
+
+	runerr_flag=1;
+	prjerr_flag=1;
+	original_buffer=inq_buffer();		// save buffer we are editing - it may
+	inq_names(NULL,NULL,temp_str);	// be required later if we dont edit
+
+
+	cut_point=0;
+
+	if(get_errbuff())			// establishes valid error buffer - error
+		return(1);				// message printed from macro call if required
+
+	set_buffer(error_buffer);
+
+	lineno=current_errline+1;
+
+	while(1){
+
+		lineno=sn_finderr(lineno);				// returns -1 at end of buffer
+
+		if(lineno<0)
+			break;
+
+		if(go_next_error){
+			if((temp_str=substr(current_errfile,index(current_errfile,"."),3))
+							!="obj"){					// dont try to edit .obj files
+				file_pattern(current_errfile);
+				if(find_file()){
+					if(thisfile=inq_buffer(current_errfile)){
+						old_wind=inq_window();
+						changed=0;
+						this_wind=inq_window();
+						do{
+							inq_window_info(this_wind,buffer,0,0,0,0);
+							if(buffer==thisfile){
+								set_buffer(thisfile);
+								set_window(this_wind);
+								changed=1;
+								break;
+							}
+						}while((this_wind=next_window(this_wind))!=old_wind);
+						if(!changed)
+							attach_buffer(thisfile);
+					}else	
+						edit_file(current_errfile);
+					goto_line(thisfile_errline);
+					change_back=0;
+				}
+				a =strlen(current_str);
+				error(substr(current_str,cut_point,a-cut_point));
+				done_err++;
+				break;
+			}
+	
+		}
+
+		if(do_error_window){
+			err_window();
+//			done_err++;
+			break;
+		}
+
+	}
+
+	if(at_endof_buf){
+		if(at_endof_buf==1){
+			beep();
+			if(done_err){
+	 			error("No more errors");
+			}else{
+				if(warn_flag){
+					error("Warnings");
+				}else{
+					top_of_buffer();
+					if(search_fwd("{error}",1,0,0,0))
+						do_window=1;
+					top_of_buffer();
+					if(search_fwd("{problem}",1,0,0,0))
+						do_window=1;
+					if(do_window)
+						err_window();
+				}
+			}
+			change_back=1;
+			at_endof_buf=0;
+		}else{
+			message("");
+			current_errline=1;
+			at_endof_buf=0;
+		}
+	}
+
+	if(change_back){
+		set_buffer(original_buffer);
+		attach_buffer(original_buffer);
+	}
+
+
+}
+
+
+err_window()
+
+{
+
+
+	global string save_errstr;
+
+	global int selected_line=current_errline,
+				  buflen=1;
+
+
+	int a,b;
+	int c,lineno=0;
+	int hiy,loy;
+	int ebuffer;
+	int oldbuffer,tempbuffer;
+	int localkey,scrn_lines,scrn_cols;
+	
+	string newstr,tempstr,t1str;
+
+	go_next_error=0;
+
+	oldbuffer=inq_buffer();
+	inq_screen_size(scrn_lines,scrn_cols);
+
+	if(get_errbuff())		// establishes a valid error buffer - error
+		return(1);			// message printed from macro call if required 
+
+	set_buffer(error_buffer);
+
+	ebuffer=create_buffer("Errors",NULL,0);
+
+	goto_line(1);
+
+	while(!inq_position()){  	// determine line-length of buffer
+		down();						
+		++buflen;
+	}
+
+	goto_line(1);
+
+	while(!inq_position()){
+	
+		newstr=read();
+		if((tempstr=substr(newstr,2,7))=="SnMake"){
+				down();
+				lineno++;
+				continue;
+		}
+		set_buffer(ebuffer);
+		insert(newstr);
+		lineno++;
+		if(strlen(newstr)>72){
+			move_abs(0,76);
+			while(1){
+				if(prev_char()==0)
+					break;
+				t1str=read(1);
+				if(t1str==" "){
+					insert("\n");
+					break;
+				}
+			}
+		}
+
+		lineno++;
+		set_buffer(error_buffer);
+		down();
+	}
+
+
+	set_buffer(ebuffer);
+	top_of_buffer();
+	if(lineno<4)
+		lineno=6;
+	else if(lineno>scrn_lines-10)
+		lineno=scrn_lines-10;
+	create_window(2,4+lineno,scrn_cols-4,4,
+				"<ESC>to quit </>prev/next error <Enter>select");
+	attach_buffer(ebuffer);
+	goto_line(current_errline);
+	down();
+	if(!(search_fwd("[a-zA-Z0-9]",1,0,0,0))){	// if at end of buffer we
+		goto_line(1);									// reset to first error or
+		mark(3);											// warning message
+		buffer_down();
+		mark(3);		
+	}else
+		up();
+
+	mark(3);  
+
+	keyboard_push ();
+
+	assign_to_key("<Esc>","errwin_exit");
+	assign_to_key("<Up Arrow>","buffer_up");
+	assign_to_key("<Down Arrow>","buffer_down");
+   assign_to_key("<Ctrl-Up Arrow>","single_up");
+   assign_to_key("<Ctrl-Down Arrow>","single_down");
+	assign_to_key("<Enter>","moveto_error");
+	assign_to_key("<Keypad-PgUp>","buffer_top");
+	assign_to_key("<Keypad-PgDn>","buffer_bottom");
+	assign_to_key("<Page Up>","buffer_top");
+	assign_to_key("<Page Down>","buffer_bottom");
+	assign_to_key("<End>","end_of_line");
+	assign_to_key("<Home>","beginning_of_line");
+	assign_to_key("<Keypad-End>","end_of_line");
+	assign_to_key("<Keypad-Home>","beginning_of_line");
+
+
+	
+
+	refresh();
+	process();
+	
+	delete_window();
+	if(change_back)
+		set_buffer(oldbuffer);
+	else{
+		edit_file(current_errfile);
+		goto_line(thisfile_errline);
+		error(save_errstr);
+		go_next_error=0;
+	}
+	delete_buffer(ebuffer);
+
+	keyboard_pop (1);
+
+	do_error_window=0;
+
+	return(0);
+
+
+}
+
+buffer_up()
+
+{
+	int upflag=TRUE;
+
+	mark(3);
+	if(!up())
+		upflag=FALSE;
+	if(!search_back("<[~ \t\n.]+.[a-zA-Z0-9][~ \t\n]@[ \t,(:][ \t]@{line}@\\c[0-9]"
+																						, 1, 0)){
+		if(upflag)																	
+			down();
+		mark(3);
+		beep();
+	}else{
+		inq_position(selected_line);
+		mark(3);
+	}
+
+}
+
+buffer_down()
+
+{
+	int downflag=TRUE;
+
+	end_of_line();						// move to end of line so search fwd looks
+											// beyond current line
+	mark(3);
+	if(!search_fwd("<[~ \t\n.]+.[a-zA-Z0-9][~ \t\n]@[ \t,(:][ \t]@{line}@\\c[0-9]"
+																						, 1, 0)){
+		mark(3);	
+		beep();
+	}else{
+		mark(3);
+		inq_position(selected_line);
+	}
+
+}
+
+	
+
+moveto_error()
+
+{
+
+
+	int a,b,
+		 move_factor=1,
+		 move_line,
+		 file_warn=0,
+		 case_flag;	
+
+	string new_line;
+	case_flag=search_case(1);			// set case insensitive, save old state
+
+	move_line=current_errline;
+
+	if(selected_line<current_errline)
+		move_factor*= -1;
+
+	while(move_line!=selected_line){
+		goto_line(move_line);
+		new_line=read();
+		
+		find_err_type(new_line);	
+		move_line+=move_factor;
+	}	
+
+	
+	goto_line(move_line);	
+	new_line=read();
+	goto_error(new_line,1);	// sets global flag go_next_error if it finds 
+								   // anything it recognises as an error
+	if(go_next_error){
+		file_pattern(current_errfile);
+		if(!find_file()){
+			go_next_error=0;
+			file_warn=1;
+		}
+	}
+
+	if(go_next_error){
+		current_errline=selected_line;
+		a =strlen(new_line);
+		save_errstr=substr(new_line,cut_point,a-cut_point);
+		change_back=0;
+		_exit();
+	}else{
+		beep();
+		if(file_warn){
+			error("Cannot find file %s",current_errfile);
+			file_warn=0;
+		}else
+			error("Unknown error type");
+			change_back=1;
+			do_error_window=0;
+	}
+
+	search_case(case_flag);		// restore saerch_case
+
+}
+
+
+snlnkerr(string new_line)
+
+{
+
+	if(!snasmerr(new_line,0))
+		return;	
+
+	if(!(index(new_line,":")))		// i.e. they are just comments
+		return;
+											// we dont want to let people edit .obj
+	do_error_window=1;				// so just put up a window with the error
+	return;								// in it.
+
+}
+
+
+
+generic_errsearch(string current_string)
+
+
+{
+	int start,end;
+	string old_errfile=current_errfile;
+
+
+	if(!(search_string("error",current_string,0,0)))
+		return(1);
+
+	if(!search_string("<{error}",current_string,0,1,0)){	
+		if(search_string("<*.[a-zA-Z0-9][~\t\n]@[ \t,(:]",current_string,
+																						0,1,0)){
+
+			start=search_string("<*.[a-zA-Z0-9][~\t\n]@[ \t,(]",current_string,
+																						end,1,0);
+
+			current_errfile=substr(current_string,start,end-start);
+	
+			start=search_string("[ \t,(][0-9]+[ \t,):]",current_string,end,1,0);	
+			if(start)
+				thisfile_errline=atoi(substr(current_string,start+1,end-2));
+			else
+				thisfile_errline=0;
+			
+			if(!(cut_point=search_string("<*{error}*:",current_string,0,1,0)))
+				cut_point=1;
+
+			if(search_string("{.obj}",current_errfile,0,1,0)){
+				current_errfile=old_errfile;
+				do_error_window=1;
+				return(1);
+			}
+
+			file_pattern(current_errfile);
+
+			if(!find_file()){
+				current_errfile=old_errfile;
+				do_error_window=1;
+			}else
+				go_next_error=1;
+			
+		}else{
+
+			  do_error_window=1;
+			  return(1);
+		}
+
+	}else if(search_string("<[ \t]@{error}",current_string,0,1,0)){
+			
+		start=search_string("[ \t][~ \t]@.[a-zA-Z0-9]@[ \t,(]",current_string,
+																							end,1,0);
+		
+		current_errfile=substr(current_string,start+1,end-2);
+
+		start=search_string("[ \t,(]+[0-9]+[ \t,):]",current_string,end,1,0);
+
+		if(!start)
+			thisfile_errline=0;
+		else
+			thisfile_errline=atoi(substr(current_string,start+1,end-2));
+	
+		go_next_error=1;
+		
+		if(strlen(current_errfile)>12)
+			go_next_error=0;
+
+	}
+	
+	return(0);
+
+
+}
+
+single_up()
+
+{
+	mark(3);
+	up();
+	inq_position(selected_line);
+	mark(3);
+}
+single_down()
+
+{
+
+	if(!inq_position()){
+		mark(3);
+		down();
+		inq_position(selected_line);
+		mark(3);
+	}else
+		beep();
+}
+
+buffer_top()
+
+{
+	mark(3);
+	top_of_buffer();
+	mark(3);
+	inq_position(selected_line);
+
+}
+
+
+buffer_bottom()
+
+{
+	mark(3);
+	end_of_buffer();
+	mark(3);	
+	inq_position(selected_line);
+ 
+}
+
+assem_thisfile()
+
+{
+
+	global int assemflag=0;
+	int c,found_db;
+	int by,ty,i;
+	int hiy,loy,hix;
+	string newstr,filename,cmdstr;
+	int white_posn,fname_posn;
+	int oldbuffer,tempbuffer;
+	
+	inq_names(NULL,NULL,filename);		// name of current buffer
+
+	tempbuffer=create_buffer("Command line ",NULL,0);
+
+	oldbuffer=set_buffer(tempbuffer);
+													// create command line
+
+	if(!strlen(pre_fname) && !strlen(after_fname)){
+		cmdstr=SNCMD+" "+Debugstr+Infostr+" "+filename; 
+	}else if(strlen(pre_fname) && !strlen(after_fname)){
+		cmdstr=pre_fname;
+	}else{
+		found_db=search_string("/d",pre_fname,0,0,1);
+		if(found_db && !strlen(Debugstr)){
+			pre_fname=ext(pre_fname,"/d");			// if not in db mode take
+		}else if(!found_db && strlen(Debugstr)){	// /d switch out
+			newstr=" /d"+ltrim(pre_fname);			// else if not in insert it
+			pre_fname=newstr;
+		}
+
+		cmdstr=SNCMD+pre_fname+filename+after_fname;
+
+	}
+
+	insert(cmdstr);												 
+
+	inq_screen_size(hiy,hix);
+
+	by=hiy/2;
+	ty=by-1;
+
+	keyboard_push ();
+
+	create_window(2,by+2,hix-4,ty,"<ESC> to quit   <ENTER> to assemble file");
+	attach_buffer(tempbuffer);
+  
+	keyboard_typeables();
+
+	assign_to_key("<Esc>","_exit");
+	assign_to_key("<Enter>","assem_do");
+	assign_to_key("<Up>","nothing");
+	assign_to_key("<Down>","nothing");
+	assign_to_key("<Left>","left");
+	assign_to_key("<Right>","assem_right");
+	assign_to_key("<Del>","assem_del");
+
+	refresh();
+	process();
+	
+	keyboard_pop();
+	delete_window();
+	top_of_buffer();
+	newstr=read();
+	newstr=substr(newstr,1,strlen(newstr)-1);
+	set_buffer(oldbuffer);
+	delete_buffer(tempbuffer);
+
+// the next section of code takes the command string (if new) and splits it
+// up according as follows :
+//			No whitespace found in the string : pre_fname takes all the cmd
+//			whitespace - no filename pre_fname takes all after the whitespace
+//			whitespace and filename pre & after fname take those portions
+//				of the cmd line their names suggest.
+  
+
+
+	if(assemflag && (newstr!=cmdstr)){
+		if(!(white_posn=search_string(" ",newstr,0,0,0))){
+			pre_fname=newstr;
+			after_fname="";
+		}else if(!(fname_posn=search_string(filename,newstr,0,0,1))){
+			pre_fname=newstr;
+			after_fname="";
+		}else{
+			pre_fname=substr(newstr,white_posn,fname_posn-white_posn);
+			after_fname=substr(newstr,fname_posn+strlen(filename));
+		}
+
+	}
+
+	if(assemflag && strlen(newstr)){
+
+		writeall_buffer();
+		cmdstr=newstr;
+
+		if(tempbuffer=inq_buffer("errors.err"))
+			delete_buffer(tempbuffer);
+
+		file_pattern(Errorfile);
+		if(find_file())
+			del(Errorfile);
+
+
+		if(dos(newstr+">&"+Errorfile,0)){
+			tempbuffer=create_buffer("temp",Errorfile,1);
+			oldbuffer=set_buffer(tempbuffer);
+			top_of_buffer();
+									 										// add dummy SnMake
+			if(white_posn=search_string(" ",newstr,0,0,0)) // info
+				newstr=substr(newstr,1,white_posn-1);
+			else
+				newstr=substr(newstr,1,strlen(newstr)-1);
+	
+			insert("[SnMakeInfo: Command : "+newstr+"]\n");
+
+			write_buffer();
+			set_buffer(oldbuffer);
+			delete_buffer(tempbuffer);
+			Snmkerr();			
+
+		}else 
+			message("Success");
+
+	}else
+		cmdstr=newstr;
+
+
+}
+
+assem_right()
+
+{
+
+	
+	if(read(1)!="\n")	// prevent walking off the end off the string
+		next_char();			// and hence onto a new line
+	
+
+}	
+
+assem_del()
+
+{
+
+	
+	if(read(1)!="\n")			// don't let the user delete the newline char 
+		delete_char();
+	else
+		beep();
+
+}
+
+assem_do()
+
+{
+ 	assemflag=1;
+	_exit();
+
+}
+	
+string ext(string tgt_str,string extraction)
+
+{
+	string t1,t2;
+	int start_posn;
+
+	if(!(start_posn=search_string(extraction,tgt_str,0,0,1)))
+		return(tgt_str);
+
+	t1=substr(tgt_str,1,start_posn-1);
+	t2=substr(tgt_str,start_posn+strlen(extraction));
+
+	tgt_str=t1+t2;
+
+	ltrim(tgt_str);
+	
+	return(" "+tgt_str);
+
+}
+

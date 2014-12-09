@@ -1,0 +1,184 @@
+Adds of WRDBJAG:
+
+Functions:
+
+WINDLIST	will list currently opened windows.
+WINDOPEN	will open a new window.
+WIND2TOP	will top an opened window.
+WINDMOVE	will move an opened window.
+WINDSIZE	will resize an opened window.
+WINDFULL	will toggle the window to its maximum size (usually screen size).
+WINDICON	will iconify/uniconify an opened window.
+WINDDUPL	will duplicate an opened window.
+WINDLOCK	will lock to an expression an opened window ("pc" is special).
+WINDCLSE	will close an opened window.
+
+All functions take as 1st argument the window number, except
+WINDLIST and WINDOPEN.
+Syntaxes are:
+WINDLIST	(no argument)
+WINDOPEN	<type> [<x> <y> <w> <h>]
+where:
+	type is one of:
+	1: 68K registers window
+	2: 68k disassembly window
+	3: memory dump window
+	4: source level window
+	<x> <y> <w> <h> are optionnal,
+or
+WINDOPEN	<"title"> <x> <y> <w> <h> <proc_name>
+(see below: Script windows)
+WIND2TOP	<num>
+WINDMOVE	<num> <dx> <dy>		Ex: windmove 3 -1 2
+WINDSIZE	<num> <dx> <dy>		Ex: windsize 3 -4 1
+WINDFULL	<num>
+WINDICON	<num>
+WINDDUPL	<num>
+WINDLOCK	<num> "expression"	Ex: windlock 3 "a0"
+WINDCLSE	<num>
+
+Variables:
+
+screenw	is the screen width in caracters.
+screenh	is the screen height in caracters.
+windnum is the current window number (means: window currently printed).
+windmsg is the current window message.
+
+Menu:
+A menu bar is available by right-clicking on the very first screen line.
+It is also available by pressing <alt>. Key shortcuts are <alt><letter>,
+where <letter> is in red upper case.
+
+Standard menus are:
+File:
+	Aread *.ABS
+	Load *.DB
+	Read *.DAT
+	Reload
+	Quit
+Context:
+	Trace
+	Overtrace
+	Verbose trace
+	Verbose overtrace
+	Next
+	Skip
+	Go
+	Go Until
+	Continue
+	Wait
+Widget:
+	Close
+	Full
+	Iconify
+	Duplicate
+	Lock
+	Cycle
+	Close all
+	Iconify all
+Open:
+	Registers
+	Disassembly
+	Memory dump
+	Source level
+	Symbols
+	Breakpoints
+	Checkpoints
+	Modules
+	Directory
+Active:
+	<List of opened windows. Choose one to active.>
+Top:
+	<Top window specific menu>
+
+Windows cosmetic:
+
+A window is built as:
+- a title bar: [close] <window number>:<title> ... [duplicate][iconify][full]
+- a left border
+- a right border where you can click to resize the window horizontally
+- a bottom border where you can click to resize the window vertically
+- at the cross of right border and bottom border, you can click to resize
+  both horizontally and vertically.
+
+[close]		closes the window.
+[duplicate]	duplicates the window.
+[iconify]	toggles icon/normal mode.
+[full]		toggles full/normal mode.
+No resizing is allowed when iconified.
+Windows are not bound to screen (except screen top).
+
+Windows management:
+
+1) Mouse:
+This is what you would expect. Click left on a gadget to activate its function.
+This will automatically top the window, unless you also right clicked.
+
+2) Keyboard:
+Pressing [Esc] while in console window will lead you to Windows Keyboard
+Control. In this mode, some keys are active (and may now unlikely change):
+[Tab]		goto next window.
+[*],[/],[+],[-]	resize window.
+[1] ~ [9] - [5]	move window.
+[0]		full/unfull window.
+[.]		icon/unicon window.
+[Esc]		quit Windows Keyboard Control and return to console window.
+[Alt][0]~[9]	goto window 0~9.
+
+Default windows:
+
+Console window:
+It emulates RDBJAG's behaviour. One major difference is that when a context
+switching is detected, the registers value (x) are not printed, they are
+updated in the registers window instead.
+
+68K registers window:
+Contains about the same informations as the 'x' command.
+Click on a register value allows change of this value.
+
+68K disassembly window:
+Contains the 68K disassembly.
+Use <a> or click in the address field to set start address.
+Use <b> or click in the line at the right of address field to set
+  or remove (toggle) a breakpoint.
+Use <j> to set the PC to the window start address.
+Click in beginning of line to toggle breakpoint.
+
+Memory dump window:
+Contains the memory dump.
+Use <a> or click in the address field to set start address.
+Use <b>, <w>, <l> to set display type (Byte, Word, Long).
+Use <g> to search a value/string.
+Use <n> to search next occurence.
+Use <e> or click in hex field or ascii field to enter edit mode.
+In edit mode:
+	in hex field:
+		<0>-<9>/<A>-<F> to change values
+		<+>/<-> increment/decrement the current field value.
+	in ASCII field:
+		any ASCII key to change values
+	to toggle between hex and ASCII fields, press <tab>.
+	to leave edit mode, press <esc>
+
+Source level window:
+Contains the program source files.
+Use <a> or click in the first line to change address/filename/line number.
+Use <b> or click in a line below to set or remove (toggle) a breakpoint.
+Click in beginning of line to toggle breakpoint.
+
+Scripts windows:
+
+One can define a window where a script procedure can print informations.
+The way to do is:
+
+windopen "my title" x y w h myproc
+
+and myproc is
+
+procedure myproc
+	print "my informations"
+.
+
+WARNING: if your script is endless, it will not work properly and you will
+have to abort with <ctrl_c>. For instance, the standard script "od.db" will
+not work properly.

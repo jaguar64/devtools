@@ -1,0 +1,9 @@
+gag on
+read sndtool.txt 802000 ; read sndtool.dta 4000 ; getsym sndtool.sym
+gag off
+echo "	start	size	end"
+echo "text	802000	fa9a	811a99"
+echo "data	4000	15164	19163"
+echo "bss	19164	132e8e	14bff1"
+echo "Symbols loaded"
+xpc 802000

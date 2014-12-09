@@ -1,0 +1,27 @@
+/*
+**		BRIEF -- Basic Reconfigurable Interactive Editing Facility
+**
+**		Written by Dave Nanian and Michael Strickman.
+*/
+
+/*
+**		old.cb:
+**
+**		This macro creates key assignments compatible with BRIEF v1.33.
+*/
+
+void old ()
+{
+	assign_to_key ("<Home>", "top_of_window");
+	assign_to_key ("<End>", "end_of_window");
+	assign_to_key ("<Ctrl-Home>", "top_of_buffer");
+	assign_to_key ("<Ctrl-End>", "end_of_buffer");
+	assign_to_key ("<Ctrl-PgUp>", "beginning_of_line");
+	assign_to_key ("<Ctrl-PgDn>", "end_of_line");
+	assign_to_key ("<Alt-c>", "search_case");
+	assign_to_key ("<Shift-F6>", "search_again");
+	assign_to_key ("<Alt-minus>", "delete_curr_buffer");
+	assign_to_key ("<Ctrl-minus>", "edit_prev_buffer");
+	assign_to_key ("<Shift-F5>", "search_back");
+	assign_to_key ("<Alt-a>", "mark");
+}

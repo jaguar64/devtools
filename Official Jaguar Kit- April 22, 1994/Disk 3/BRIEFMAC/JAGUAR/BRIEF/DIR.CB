@@ -1,0 +1,957 @@
+/* --------------------------------------------------------------------------- */
+/* 																								 */
+/* 									DIR Macro												 */
+/* 																								 */
+/* --------------------------------------------------------------------------- */
+/* 																								 */
+/* 		This macro is designed to operate simular to the menus seen in 	 */
+/* 		the popular NORTON COMMANDER program.	You can go UP or DOWN the	 */
+/* 		tree structure on the disk by moving the cursor over the proper	 */
+/* 		<DIR> entry in the directory and hitting the <Enter> key.			 */
+/* 																								 */
+/* 		If the <Enter> key is hit and a file (instead of a directory		 */
+/* 		<DIR> entry) is highlighted then this file will be loaded into 	 */
+/* 		BRIEF and be ready for editing.												 */
+/* 																								 */
+/* 		The <Ins> or <Space> key will TOGGLE the file marker for the		 */
+/* 		file that is currently highlighted.  <DIR> files MAY NOT BE 		 */
+/* 		marked as they can not be edited.  After having marked one or		 */
+/* 		more (as many as you like) you can then have ALL of the MARKED 	 */
+/* 		files loaded into BRIEF by hitting the <Alt-L> key.					 */
+/* 																								 */
+/* 		If you do NOT wish to edit any files, simply hit the <Esc> key 	 */
+/* 		and you will be back editing the file that you started with.		 */
+/* 																								 */
+/* 		The <Home>, <End>, <Up>, <Down>, <PgUp>, and <PgDn> keys are		 */
+/* 		used to move you around within the directory.							 */
+/* 																								 */
+/* 		Written BY:  Robert H. Morrison, 1 July 1988 							 */
+/* 					 Karlsruhe, West Germany											 */
+/* 																								 */
+/* 		Last Update: 6 July 1988														 */
+/* 																								 */
+/* 																								 */
+
+#define LINE	  3
+#define SYSTEM 	  1
+
+#define UP_DIR 	  ".."
+#define DOWN_DIR	  ".\\"
+
+#define SELECT 	  1
+#define UNSELECT 2
+
+#define ALT_KEY	  8
+
+#include "dialog.h"
+
+_init (...)
+{
+	int	mark_typ,
+			updir,
+			alt_done,
+			rows,
+			cols;
+
+	string	new_file,
+				bhelp,
+				bdirfile,
+				bdirpgm,
+				bdiropt,
+				bdirtxt,
+				old_opt,
+				select,
+				unselect,
+				alt_search,
+				bdir;
+
+	global	new_file,
+				bhelp,
+				bdirfile,
+				bdirpgm,
+				bdiropt,
+				bdirtxt,
+				old_opt,
+				select,
+				unselect,
+				alt_search,
+				alt_done,
+				bdir,
+				mark_typ,
+				updir,
+				rows,
+				cols;
+
+	alt_search = "\<þ\|  ";
+	alt_done = FALSE;
+	bhelp = lower (inq_environment ("BHELP"));
+	if (bhelp != "")
+		bhelp += "\\";
+	bdiropt = "F";
+	bdirfile = bhelp + "temp.dir";
+	bdirpgm = bhelp + "bmakedir.exe";
+	bdirtxt = bhelp + "bmakedir.txt";
+	bdir = bdirpgm + ((" \-" + bdiropt) + (" \>&" + bdirfile));
+	inq_screen_size (rows, cols);
+	rows -= 10;
+	cols -= 42;
+	cols /= 2;
+}
+
+dir (...)
+{
+	extern	to_bottom,
+				display_file_name;
+
+	int	dir_buffer,
+			old_buffer,
+			dir_window,
+			old_window,
+			end_line,
+			line;
+
+	string	temp,
+				this_line,
+				current_dir,
+				current_drive,
+				answer;
+
+	global	end_line,
+				this_line,
+				line,
+				old_buffer,
+				dir_buffer,
+				current_dir,
+				current_drive,
+				answer;
+
+	new_file = "";
+	message ("Reading disk directory...");
+	dos (bdir);
+	old_buffer = inq_buffer ();
+	dir_buffer = create_buffer ("DIR Ver 1.00", bdirtxt, SYSTEM);
+	create_window (cols, rows + 4, cols + 42, 3, "Ins - + Enter F1 F2 F4 F7 F8 F9 F10 Esc");
+	attach_buffer (dir_buffer);
+	set_buffer (dir_buffer);
+	getwd (NULL, current_dir);
+	current_dir = upper (current_dir);
+	current_drive = substr (current_dir, 1, 1);
+	top_of_buffer ();
+	read_file (bdirfile);
+	up ();
+	inq_position (end_line, NULL);
+	top_of_buffer ();
+
+	keyboard_push ();
+	assign_to_key ("<Space>", "no_beep");
+	assign_to_key ("<Enter>", "select_dir");
+	assign_to_key ("<Home>", "top_of_dir");
+	assign_to_key ("<End>", "end_of_dir");
+	assign_to_key ("<Up>", "up_dir");
+	assign_to_key ("<Down>", "down_dir");
+	assign_to_key ("<PgUp>", "pgup_dir");
+	assign_to_key ("<PgDn>", "pgdown_dir");
+	assign_to_key ("<Ins>", "mark_dir");
+	assign_to_key ("<Ctrl-PgUp>", "up_1_dir");
+	assign_to_key ("<F1>", "help_dir");
+	assign_to_key ("<F2>", "change_drive");
+	assign_to_key ("<F4>", "load_marked");
+	assign_to_key ("<F7>", "make_dir");
+	assign_to_key ("<F8>", "delete_file");
+	assign_to_key ("<F9>", "set_mode");
+	assign_to_key ("<F10>", "_exit");
+	assign_to_key ("<Esc>", "_exit");
+	assign_to_key ("<Ctrl-\\>", "root_dir");
+	assign_to_key ("<\\>", "root_dir");
+	assign_to_key ("<Ctrl-R>", "read_dir");
+	assign_to_key ("<Keypad-minus>", "unselect_marks");
+	assign_to_key ("<Keypad-plus>", "select_marks");
+	assign_to_key ("<Alt-a>", "NC_alt_search a");
+	assign_to_key ("<Alt-b>", "NC_alt_search b");
+	assign_to_key ("<Alt-c>", "NC_alt_search c");
+	assign_to_key ("<Alt-d>", "NC_alt_search d");
+	assign_to_key ("<Alt-e>", "NC_alt_search e");
+	assign_to_key ("<Alt-f>", "NC_alt_search f");
+	assign_to_key ("<Alt-g>", "NC_alt_search g");
+	assign_to_key ("<Alt-h>", "NC_alt_search h");
+	assign_to_key ("<Alt-i>", "NC_alt_search i");
+	assign_to_key ("<Alt-j>", "NC_alt_search j");
+	assign_to_key ("<Alt-k>", "NC_alt_search k");
+	assign_to_key ("<Alt-l>", "NC_alt_search l");
+	assign_to_key ("<Alt-m>", "NC_alt_search m");
+	assign_to_key ("<Alt-n>", "NC_alt_search n");
+	assign_to_key ("<Alt-o>", "NC_alt_search o");
+	assign_to_key ("<Alt-p>", "NC_alt_search p");
+	assign_to_key ("<Alt-q>", "NC_alt_search q");
+	assign_to_key ("<Alt-r>", "NC_alt_search r");
+	assign_to_key ("<Alt-s>", "NC_alt_search s");
+	assign_to_key ("<Alt-t>", "NC_alt_search t");
+	assign_to_key ("<Alt-u>", "NC_alt_search u");
+	assign_to_key ("<Alt-v>", "NC_alt_search v");
+	assign_to_key ("<Alt-w>", "NC_alt_search w");
+	assign_to_key ("<Alt-x>", "NC_alt_search x");
+	assign_to_key ("<Alt-y>", "NC_alt_search y");
+	assign_to_key ("<Alt-z>", "NC_alt_search z");
+	assign_to_key ("<Alt-_>", "NC_alt_search _");
+	assign_to_key ("<Alt-0>", "NC_alt_search 0");
+	assign_to_key ("<Alt-1>", "NC_alt_search 1");
+	assign_to_key ("<Alt-2>", "NC_alt_search 2");
+	assign_to_key ("<Alt-3>", "NC_alt_search 3");
+	assign_to_key ("<Alt-4>", "NC_alt_search 4");
+	assign_to_key ("<Alt-5>", "NC_alt_search 5");
+	assign_to_key ("<Alt-6>", "NC_alt_search 6");
+	assign_to_key ("<Alt-7>", "NC_alt_search 7");
+	assign_to_key ("<Alt-8>", "NC_alt_search 8");
+	assign_to_key ("<Alt-9>", "NC_alt_search 9");
+
+	drop_anchor (LINE);
+	message ("%s", current_dir);
+	refresh ();
+
+	process ();
+
+	keyboard_pop ();
+	delete_window ();
+	if (new_file != "")
+		{
+		if (new_file != "Load Multiple Files")
+			{
+			message ("Loading \"%s\" for editing...", new_file);
+			edit_file (new_file);
+			old_buffer = inq_buffer ();
+			}
+		else
+			{
+			top_of_buffer ();
+			while (search_fwd ("<\\cþ"))
+				{
+				this_line = read ();
+				down ();
+				new_file = trim (substr (this_line, 3, 8));
+				new_file += "." + trim (substr (this_line, 12, 3));
+				message ("Loading \"%s\" for editing...", new_file);
+				edit_file (new_file);
+				old_buffer = inq_buffer ();
+				set_buffer (dir_buffer);
+				}
+			}
+		}
+	set_buffer (old_buffer);
+	delete_buffer (dir_buffer);
+	display_file_name ();
+}
+
+no_beep (...)
+{
+	return;
+}
+
+end_NC_alt (...)
+{
+	get_parm (0, alt_search);
+	exit ();
+}
+
+NC_alt_search (...)
+{
+	extern	_do_beep;
+
+	int	alt_line;
+
+	string	alt_char;
+
+	keyboard_push ();
+	assign_to_key ("<Enter>", "end_NC_alt <Enter>");
+	assign_to_key ("<Home>", "end_NC_alt <Home>");
+	assign_to_key ("<End>", "end_NC_alt <End>");
+	assign_to_key ("<Up>", "end_NC_alt <Up>");
+	assign_to_key ("<Down>", "end_NC_alt <Down>");
+	assign_to_key ("<PgUp>", "end_NC_alt <PgUp>");
+	assign_to_key ("<PgDn>", "end_NC_alt <PgDn>");
+	assign_to_key ("<Ins>", "end_NC_alt <Ins>");
+	assign_to_key ("<Ctrl-PgUp>", "end_NC_alt <Ctrl-PgUp>");
+	assign_to_key ("<F1>", "end_NC_alt <F1>");
+	assign_to_key ("<F2>", "end_NC_alt <F2>");
+	assign_to_key ("<F4>", "end_NC_alt <F4>");
+	assign_to_key ("<F7>", "end_NC_alt <F7>");
+	assign_to_key ("<F8>", "end_NC_alt <F8>");
+	assign_to_key ("<F9>", "end_NC_alt <F9>");
+	assign_to_key ("<F10>", "end_NC_alt <F10>");
+	assign_to_key ("<Esc>", "end_NC_alt <Esc>");
+	assign_to_key ("<Ctrl-\\>", "end_NC_alt <Ctrl-\\>");
+	assign_to_key ("<\\>", "end_NC_alt <\\>");
+	assign_to_key ("<Ctrl-R>", "end_NC_alt <Ctrl-R>");
+	assign_to_key ("<Keypad-minus>", "end_NC_alt <Keypad-minus>");
+	assign_to_key ("<Keypad-plus>", "end_NC_alt <Keypad-plus>");
+	assign_to_key ("<Alt-a>", "NC_alt a");
+	assign_to_key ("<Alt-b>", "NC_alt b");
+	assign_to_key ("<Alt-c>", "NC_alt c");
+	assign_to_key ("<Alt-d>", "NC_alt d");
+	assign_to_key ("<Alt-e>", "NC_alt e");
+	assign_to_key ("<Alt-f>", "NC_alt f");
+	assign_to_key ("<Alt-g>", "NC_alt g");
+	assign_to_key ("<Alt-h>", "NC_alt h");
+	assign_to_key ("<Alt-i>", "NC_alt i");
+	assign_to_key ("<Alt-j>", "NC_alt j");
+	assign_to_key ("<Alt-k>", "NC_alt k");
+	assign_to_key ("<Alt-l>", "NC_alt l");
+	assign_to_key ("<Alt-m>", "NC_alt m");
+	assign_to_key ("<Alt-n>", "NC_alt n");
+	assign_to_key ("<Alt-o>", "NC_alt o");
+	assign_to_key ("<Alt-p>", "NC_alt p");
+	assign_to_key ("<Alt-q>", "NC_alt q");
+	assign_to_key ("<Alt-r>", "NC_alt r");
+	assign_to_key ("<Alt-s>", "NC_alt s");
+	assign_to_key ("<Alt-t>", "NC_alt t");
+	assign_to_key ("<Alt-u>", "NC_alt u");
+	assign_to_key ("<Alt-v>", "NC_alt v");
+	assign_to_key ("<Alt-w>", "NC_alt w");
+	assign_to_key ("<Alt-x>", "NC_alt x");
+	assign_to_key ("<Alt-y>", "NC_alt y");
+	assign_to_key ("<Alt-z>", "NC_alt z");
+	assign_to_key ("<Alt-_>", "NC_alt _");
+	assign_to_key ("<Alt-0>", "NC_alt 0");
+	assign_to_key ("<Alt-1>", "NC_alt 1");
+	assign_to_key ("<Alt-2>", "NC_alt 2");
+	assign_to_key ("<Alt-3>", "NC_alt 3");
+	assign_to_key ("<Alt-4>", "NC_alt 4");
+	assign_to_key ("<Alt-5>", "NC_alt 5");
+	assign_to_key ("<Alt-6>", "NC_alt 6");
+	assign_to_key ("<Alt-7>", "NC_alt 7");
+	assign_to_key ("<Alt-8>", "NC_alt 8");
+	assign_to_key ("<Alt-9>", "NC_alt 9");
+
+	unregister_macro (3, "_do_beep");
+	register_macro (3, "end_NC_alt");
+
+	alt_done = FALSE;
+	inq_position (line, NULL);
+	top_of_buffer ();
+	get_parm (0, alt_char);
+	NC_alt (alt_char);
+
+	process ();
+
+	keyboard_pop ();
+	register_macro (3, "_do_beep");
+	unregister_macro (3, "end_NC_alt");
+
+	push_back (key_to_int (alt_search));
+	alt_search = "\<þ\|  ";
+}
+
+NC_alt (...)
+{
+	string	alt_char;
+
+	if (!alt_done)
+		{
+		get_parm (0, alt_char, "", 1);
+
+		raise_anchor ();
+
+		alt_search += alt_char;
+
+		message ("Searching DIR for \"%s\".\*", substr (alt_search, 6));
+
+		if (search_fwd (alt_search, TRUE, FALSE, FALSE))
+			inq_position (line, NULL);
+		else
+			alt_done = TRUE;
+
+		message ("%s", current_dir);
+
+		move_abs (line, 1);
+		drop_anchor (LINE);
+		refresh ();
+		}
+
+	while (!inq_kbd_char ())
+		{
+		if (!(inq_kbd_flags () & ALT_KEY))
+			{
+			execute_macro ("end_NC_alt <Space>");
+			break;
+			}
+		}
+
+}
+
+change_drive (...)
+{
+	current_drive = "?";
+	new_file = "Change Drive";
+	while (current_drive != "" && (current_drive < "A" || current_drive > "Z"))
+		{
+		if (current_drive != "?")
+			beep ();
+		current_drive = "";
+		get_parm (NULL, current_drive, "Input New Drive Letter? ", 1);
+		if (current_drive == "?")
+			beep ();
+		current_drive = upper (current_drive);
+		}
+	if (current_drive >= "A" && current_drive <= "Z")
+		select_dir ();
+	else
+		{
+		message ("%s", current_dir);
+		current_drive = substr (current_dir, 1, 1);
+		new_file = "";
+		}
+}
+
+make_dir (...)
+{
+	string	subdir;
+
+	get_parm (NULL, subdir, "Name of SUB-DIR? ", 12);
+	if (subdir != "")
+		{
+		new_file = "Change Drive";
+		subdir = upper (subdir);
+		message ("Creating SUB-DIR \"%s\"...", subdir);
+		if (dos (("md " + subdir) + "\>\&tempmdir.err"))
+			error ("Unable to create %s SUB-DIR.", DOWN_DIR + subdir);
+		else
+			{
+			del ("tempmdir.err");
+			select_dir ();
+			}
+		}
+	else
+		message ("%s", current_dir);
+}
+
+help_dir (...)
+{
+	extern	display_help;
+
+	display_help ("dir");
+	message ("%s", current_dir);
+	keyboard_flush ();
+}
+
+read_dir (...)
+{
+	new_file = "Change Drive";
+	select_dir ();
+}
+
+up_1_dir (...)
+{
+	if (strlen (current_dir) > 3)
+		{
+		new_file = "Change Drive UP";
+		select_dir ();
+		}
+	else
+		beep ();
+}
+
+root_dir (...)
+{
+	if (strlen (current_dir) > 3)
+		{
+		new_file = "Change Drive";
+		cd ("\\");
+		select_dir ();
+		}
+	else
+		beep ();
+}
+
+delete_file (...)
+{
+	inq_position (line, NULL);
+	raise_anchor ();
+	top_of_buffer ();
+	if (search_fwd ("<\\cþ"))
+		{
+		answer = "?";
+		while (upper (answer) != "Y" && upper (answer) != "N")
+			{
+			if (answer != "?")
+				beep ();
+			answer = "";
+			get_parm (NULL, answer, "Delete ALL MARKED files \[YyNn\]? ", 1);
+			if (answer == "")
+				answer = "N";
+			else
+				if (answer == "?")
+					beep ();
+			}
+		if (upper (answer) == "Y")
+			{
+			top_of_buffer ();
+			while (search_fwd ("<\\cþ"))
+				{
+				this_line = read ();
+				beginning_of_line ();
+				down ();
+				new_file = trim (substr (this_line, 3, 8));
+				if (search_string ("DIR", this_line, NULL, 0))
+					{
+					if (substr (new_file, 1, 2) != "..")
+						{
+						if (substr (this_line, 12, 1) != " ")
+							new_file += "." + trim (substr (this_line, 12, 3));
+						error ("%s", this_line);
+						message ("Deleting \"%s\" Directory...", new_file);
+						dos ("rd " + (new_file + " \>&temp.err"));
+						del ("temp.err");
+						}
+					}
+				else
+					{
+					new_file += "." + trim (substr (this_line, 12, 3));
+					message ("Deleting \"%s\" from DISK...", new_file);
+					if (del (new_file) <= 0)
+						{
+						beep ();
+						error ("Unable to delete \"%s\" - Hit ANY key ", new_file);
+						while (!inq_kbd_char ())
+							;
+						read_char ();
+						}
+					}
+				}
+			}
+		else
+			{
+			move_abs (line, 1);
+			drop_anchor (LINE);
+			message ("%s", current_dir);
+			return;
+			}
+		}
+	else
+		{
+		move_abs (line, 1);
+		drop_anchor (LINE);
+		this_line = read ();
+		beginning_of_line ();
+		answer = "?";
+		while (upper (answer) != "Y" && upper (answer) != "N")
+			{
+			if (answer != "?")
+				beep ();
+			answer = "";
+			get_parm (NULL, answer, "Delete HIGHLIGHTED FILE from DISK \[YyNn\]? ", 1);
+			if (answer == "")
+				answer = "N";
+			else
+				if (answer == "?")
+					beep ();
+			}
+		if (upper (answer) == "Y")
+			{
+			new_file = trim (substr (this_line, 3, 8));
+			if (search_string ("DIR", this_line, NULL, 0))
+				{
+				if (substr (new_file, 1, 2) != "..")
+					{
+					if (substr (this_line, 12, 1) != " ")
+						new_file += "." + trim (substr (this_line, 12, 3));
+					message ("Deleting \"%s\" Directory...", new_file);
+					dos ("rd " + (new_file + " \>&tempddir.err"));
+					del ("tempddir.err");
+					}
+				}
+			else
+				{
+				new_file += "." + trim (substr (this_line, 12, 3));
+				message ("Deleting \"%s\" from DISK...", new_file);
+				if (del (new_file) <= 0)
+					{
+					beep ();
+					error ("Unable to delete \"%s\" - Hit ANY key ", new_file);
+					while (!inq_kbd_char ())
+						;
+					read_char ();
+					}
+				}
+			}
+		else
+			{
+			message ("%s", current_dir);
+			return;
+			}
+		}
+	read_dir ();
+}
+
+load_marked (...)
+{
+	inq_position (line, NULL);
+	this_line = read (16);
+	raise_anchor ();
+	top_of_buffer ();
+	if (search_fwd ("<\\cþ"))
+		new_file = "Load Multiple Files";
+	else
+		{
+		if ("" == substr (this_line, 16, 1))
+			{
+			new_file = "";
+			beep ();
+			error ("DIRECTORIES may NOT be edited.  Hit ANY key...");
+			while (!inq_kbd_char ())
+				;
+			read_char ();
+			message ("%s", current_dir);
+			move_abs (line, 1);
+			drop_anchor (LINE);
+			return;
+			}
+		else
+			{
+			new_file = trim (substr (this_line, 3, 8));
+			new_file += "." + trim (substr (this_line, 12, 3));
+			}
+		}
+	exit ();
+}
+
+top_of_dir (...)
+{
+	raise_anchor ();
+	top_of_buffer ();
+	drop_anchor (LINE);
+}
+
+end_of_dir (...)
+{
+	raise_anchor ();
+	move_abs (end_line, 1);
+	beginning_of_line ();
+	to_bottom ();
+	drop_anchor (LINE);
+}
+
+pgup_dir (...)
+{
+	extern	screen_down;
+
+	int	count;
+
+	raise_anchor ();
+	inq_position (line, NULL);
+	count = rows;
+	line -= count;
+	if (line > 1)
+		while (count)
+			{
+			screen_down ();
+			--count;
+			}
+	else
+		{
+		top_of_dir ();
+		return;
+		}
+	move_abs (line, 1);
+	drop_anchor (LINE);
+}
+
+pgdown_dir (...)
+{
+	extern	screen_up;
+
+	int	count;
+
+	raise_anchor ();
+	inq_position (line, NULL);
+	count = rows;
+	line += count;
+	if (line <= end_line)
+		while (count)
+			{
+			screen_up ();
+			--count;
+			}
+	else
+		{
+		end_of_dir ();
+		return;
+		}
+	move_abs (line, 1);
+	drop_anchor (LINE);
+}
+
+up_dir (...)
+{
+	raise_anchor ();
+	up ();
+	drop_anchor (LINE);
+}
+
+down_dir (...)
+{
+	inq_position (line, NULL);
+	if (line != end_line)
+		{
+		raise_anchor ();
+		down ();
+		drop_anchor (LINE);
+		}
+}
+
+mark_dir (...)
+{
+	this_line = read (16);
+
+	if (substr (this_line, 16, 1) != "")
+		{
+		delete_char ();
+		if (search_string ("þ", this_line, NULL, 0))
+			{
+			insert (" ");
+			}
+		else
+			{
+			insert ("þ");
+			}
+		beginning_of_line ();
+		}
+}
+
+convert_select (...)
+{
+	int	index_sel;
+
+	string	temp_char,
+				temp_sel;
+
+	get_parm (0, select);
+	index_sel = 1;
+
+	while (index_sel <= strlen (select))
+		{
+		temp_char = substr (select, index_sel, 1);
+		if (index ("\@\+\{\}\-\<\%\>\$", temp_char))
+			temp_sel += "\\";
+		temp_sel += temp_char;
+		++index_sel;
+		}
+
+	if (strlen (temp_sel))
+		temp_sel = ("þ\|  " + temp_sel) + " @³";
+	else
+		temp_sel = "";
+
+	put_parm (0, temp_sel);
+}
+
+select_action (...)
+{
+	int	event_type,
+			line_no;
+
+	string	button_text;
+
+	get_parm (0, event_type);
+	get_parm (1, line_no);
+	get_parm (2, button_text);
+
+	switch (event_type)
+		{
+		case DIALOG_ENTER_FIELD:
+			{
+			select = "\*.\*";
+			}
+		case DIALOG_EXIT_FIELD:
+			{
+			select = button_text;
+			put_parm (0, DIALOG_F10);
+			}
+		case DIALOG_ESCAPE:
+			{
+			select = "";
+			}
+		}
+	return TRUE;
+}
+
+multiple_marks (...)
+{
+	int	line_no;
+
+	raise_anchor ();
+	if (mark_typ == SELECT)
+		_process_dialog_box (cols + 11, 10, cols + 28, 8, "Select", "", "select", NULL, "select_action");
+	else
+		_process_dialog_box (cols + 11, 10, cols + 28, 8, "Unselect", "", "select", NULL, "select_action");
+	if (select != "")
+		{
+		convert_select (select);
+		get_parm (0, select);
+		message ("Marking specified files...");
+		inq_position (line, NULL);
+		line_no = end_line;
+
+		while (line_no)
+			{
+			move_abs (line_no, 1);
+			this_line = read (16);
+			new_file = trim (substr (this_line, 1, 10));
+			new_file += "." + trim (substr (this_line, 12, 4));
+			if (search_string (select, new_file) && substr (this_line, 16, 1) != "")
+				{
+				delete_char ();
+				switch (mark_typ)
+					{
+					case SELECT:
+						insert ("þ");
+					case UNSELECT:
+						insert (" ");
+					}
+				}
+			--line_no;
+			}
+		new_file = "";
+		move_abs (line, 1);
+		}
+	drop_anchor (LINE);
+	message ("%s", current_dir);
+	refresh ();
+}
+
+select_marks (...)
+{
+	mark_typ = SELECT;
+	multiple_marks ();
+}
+
+unselect_marks (...)
+{
+	mark_typ = UNSELECT;
+	multiple_marks ();
+}
+
+select_dir (...)
+{
+	string	old_dir;
+
+	updir = FALSE;
+	this_line = read (16);
+
+	if ("" == substr (this_line, 16, 1) || substr (new_file, 1, 12) == "Change Drive")
+		{
+		if (search_string ("..", this_line, NULL, 0) || substr (new_file, 1, 12) == "Change Drive")
+			{
+			if (new_file == "Change Drive")
+				{
+				cd (current_drive + ":");
+				}
+			else
+				{
+				cd (UP_DIR);
+				updir = TRUE;
+				}
+			new_file = "";
+			}
+		else
+			{
+			new_file = trim (substr (this_line, 3, 8));
+			if (substr (this_line, 12, 1) != " ")
+				new_file += "." + trim (substr (this_line, 12, 3));
+			cd (DOWN_DIR + new_file);
+			new_file = "";
+			}
+
+		raise_anchor ();
+		top_of_buffer ();
+		drop_anchor (LINE);
+		move_abs (end_line, 1);
+		delete_block ();
+		top_of_buffer ();
+		refresh ();
+		message ("Reading disk directory...");
+		dos (bdir);
+		old_dir = current_dir;
+		getwd (NULL, current_dir);
+		current_dir = upper (current_dir);
+		current_drive = substr (current_dir, 1, 1);
+		read_file (bdirfile);
+		up ();
+		inq_position (end_line, NULL);
+		top_of_buffer ();
+
+		if (updir)
+			{
+			updir = strlen (current_dir);
+			if (updir < strlen (old_dir))
+				{
+				int	dot;
+
+				if (updir > 3)
+					++updir;
+				++updir;
+				select = upper (substr (old_dir, updir));
+				dot = index (select, ".");
+				if (dot)
+					select = (substr (select, 1, dot - 1) + " \+") + substr (select, dot + 1);
+				search_fwd (select);
+				beginning_of_line ();
+				}
+			updir = FALSE;
+			}
+
+		drop_anchor (LINE);
+		message ("%s", current_dir);
+		refresh ();
+		}
+	else
+		{
+		new_file = trim (substr (this_line, 3, 8));
+		new_file += "." + trim (substr (this_line, 12, 3));
+		exit ();
+		}
+}
+
+set_mode (...)
+{
+	old_opt = bdiropt;
+	push_back (key_to_int (bdiropt));
+	_process_dialog_box (cols - 3, 10, cols + 44, 8, "Sort DIR by", "", "setmode", NULL, "mode_action");
+	if (old_opt != bdiropt)
+		{
+		bdiropt = old_opt;
+		bdir = bdirpgm + ((" \-" + bdiropt) + (" \>&" + bdirfile));
+		read_dir ();
+		}
+	else
+		message ("%s", current_dir);
+}
+
+mode_action (...)
+{
+	int	event_type,
+			line_no;
+
+	string	button_text;
+
+	get_parm (0, event_type);
+	get_parm (1, line_no);
+	get_parm (2, button_text);
+
+	switch (event_type)
+		{
+		case DIALOG_ENTER_LIST:
+			{
+			old_opt = substr (button_text, 1, 1);
+			}
+		case DIALOG_ALTER_LIST:
+			{
+			old_opt = substr (button_text, 1, 1);
+			put_parm (0, DIALOG_F10);
+			}
+		case DIALOG_ESCAPE:
+			{
+			old_opt = bdiropt;
+			}
+		}
+	return TRUE;
+}
+

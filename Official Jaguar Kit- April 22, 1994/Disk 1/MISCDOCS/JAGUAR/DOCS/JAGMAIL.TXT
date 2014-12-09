@@ -1,0 +1,316 @@
+
+
+Message : 76 [Open] 12/22/92
+From    : Hms
+To      : All
+Subject : Jaguar
+Sig(s)  : 11
+
+It must be Christmas :-) We've just taken deliver of a Jaguar development
+system.
+ 
+Regards, Rob @ HMS
+
+
+Message : 91 [Open] 2/2/93
+From    : Hms
+To      : All
+Subject : Jaguar
+Sig(s)  : 11
+
+ 
+A couple of questions about the Jaguar:
+ 
+1.   We  seem to have some kind of  monitor  conflict  with  Jeff
+     Minter's demos. There is something there but the sync is all
+     screwed up. Any ideas?
+ 
+2.   If we install the  latest  ROMs (which I guess are needed to
+     use the TT development system), then will we  still  be able
+     to use the PC tools?
+ 
+3.   How much RAM is fitted to Felix?
+ 
+4.   Are any tools available for  converting  from  other picture
+     formats (e.g. DPaint 256 colour) to CRY format?
+ 
+That's all for now.
+ 
+Regards, Rob.
+
+
+Message : 92 [Open] 2/5/93
+From    : John Skruch
+To      : Hms
+Subject : #91 Jaguar
+Sig(s)  : 11
+
+jeff's stuff was ntsc.  Perhaps that is the problem.
+felix has 1mb of ram.  That is the same as production machines.
+the TT roms work only for the TT.  The TT tools are more complete.
+the TT tools include graphics file converters like TIF to CRY.
+regards.  John S.
+
+
+Message : 93 [Open] 2/5/93
+From    : John Skruch
+To      : Hms
+Subject : #91 Jaguar
+Sig(s)  : 11
+
+The simplest fix is to adjust the verticle hold on your monitor.
+Did the other programs in the example folder work ok?
+If the monitor adjust did not help then do the following:
+In VIDINIT:
+N_VP EQU 523       ADD 100
+N_VDB EQU N_VBE+26    ADJUST THE 26 TO TASTE
+N_VBB EQU             MAKE BIGGER
+
+
+Message : 94 [Open] 2/12/93
+From    : Hms
+To      : John Skruch
+Subject : #92 Jaguar
+Sig(s)  : 11
+
+Thanks John, I'll download the utilities. I managed to get most of
+the demos working by reassembling with a different value in the
+video clock. Having it appeared to work. We're going to need some more
+information on this if we start a real project. Regards, Rob.
+
+
+Message : 95 [Open] 2/12/93
+From    : Hms
+To      : John Skruch
+Subject : #93 Jaguar
+Sig(s)  : 11
+
+We got them all working by changing the video clock to half it's value
+as supplied in the source. They all worked but the picture only occupied
+half the screen across.
+ 
+Regards, Rob.
+
+
+Message : 96 [Open] 2/19/93
+From    : John Skruch
+To      : All Uk Jaguar Devel
+Subject : Gulam
+Sig(s)  : 11
+
+Gulam is mapped to a US keyboard.  We are looking into
+a modify file to give you to map it to your keyboard.
+In the meantime, us the # key to get a \ and use your 
+pound sterling key to get a #.
+regards......John S.
+
+
+Message : 97 [Open] 2/19/93
+From    : Joe Jared
+To      : Anyone With A Clue
+Subject : Quad type display.
+Sig(s)  : 11
+
+  Recently I've been running the demos to get a clue about the system
+myself, and during the process, my display appears to be broken into 4
+quadrants, where each quadrant has the appearance of a full screen from
+what I remember of the November conference demonstrations.  Anyway, the
+system is still usable during this part of the learning curve, but if
+someone has an idea about how to get rid of this undocumented non-feature
+it would be appreciated.  I noticed that someone else mentioned monitor
+problems and haven't yet tried that, but they may be different problems.
+
+
+Message : 98 [Open] 2/19/93
+From    : John Skruch
+To      : Joe Jared
+Subject : quad display
+Sig(s)  : 11
+
+the jumpers on the timex card were set incorrectly.
+a fax to Ef is on its way that shows the correct
+jumper setup.  regards.....John S.
+
+
+Message : 100 [Open] 2/22/93
+From    : Hms
+To      : John Skruch
+Subject : #98 quad display
+Sig(s)  : 11
+
+What do these jumpers do exactly?
+ 
+Regards, Rob @ HMS
+
+
+Message : 101 [Open] 2/22/93
+From    : John Skruch
+To      : Hms
+Subject : #100 quad display
+Sig(s)  : 11
+
+the jumpers connect wires together.
+regards.....John S.
+
+
+Message : 102 [Open] 2/23/93
+From    : Joe Jared
+To      : John Skruch
+Subject : #101 quad display
+Sig(s)  : 11
+
+That explains much... 
+LEDS
+D1..D3 are always on
+D4 is always off
+The LED pack does not appear to have any consistant output.
+Current Jumper settings on the mother board:
+JP5   1
+JP2   1
+JP3   0
+JP4   0
+JP9   0
+JP6   0
+JP7   1
+JP8   1
+;
+Communications card:
+JP1 the right most pins are jumpered.
+;
+Joystick Interface Jumpered pins:
+;
+JP2-3
+JP1-4
+;
+;
+EPROM card:
+.XX  (XX denotes jumpered position)
+.XX
+;
+XX. (Bank 0)
+Jaguar Rom Card.
+Rom and 32bit are jumpered, JP1 is open
+;
+Symptoms:
+(Without the Jaguar Rom card installed)
+The bottom 2 leds on the led pack are on, but the other leds are not
+consistant. Bringing up the debugger RDBJAG requires usage of a wand,
+walking around the machine 3 times, and something else...
+;
+(With the Jaguar Rom card installed)
+All LED's on the LED pack are on, and no response from Felix.
+(Waiting into infinity)
+
+
+Message : 103 [Open] 2/24/93
+From    : Joe Jared
+To      : Madmac Developers
+Subject : Case sensitive?
+Sig(s)  : 11
+
+Are there any plans to make MadMac case insensitive?  It's not a real big
+deal, but would be nice to know that APPLE == ApPle, since I personally
+plan on not having identical variables.
+
+
+Message : 104 [Open] 2/24/93
+From    : John Skruch
+To      : Joe Jared
+Subject : #103 Case sensitive?
+Sig(s)  : 11
+
+there are no plans to modify MADMAC at this time.  There are too many 
+more critical items for us to spend our time on.  Regards....JS
+
+
+Message : 105 [Open] 2/25/93
+From    : Hms
+To      : John Skruch
+Subject : #101 quad display
+Sig(s)  : 11
+
+Very funny :-)
+
+
+Message : 110 [Open] 3/2/93
+From    : John Skruch
+To      : Rebellion
+Subject : #109 where's help file?
+Sig(s)  : 11
+
+Help can be accessed by pressing Return at a prompt or the letter
+H.  If you are using an ST the help key also works.  Regards..JS
+
+
+Message : 116 [Open] 3/5/93
+From    : John Skruch
+To      : All
+Subject : BLITTER
+Sig(s)  : 11
+
+MAKE SURE IF YOU ARE DOING BLITS OF LESS THAN 8BITS/PIXEL
+THAT YOU SET THE DSTEN BIT IN THE BLITTER COMMAND REGISTER.
+ 
+ALWAYS ADD THE FOLLOWING LINE OF CODE AT THE START OF YOUR
+PROGRAM:
+MOVE.L    #$00020002, G_END
+IF G_END IS NOT DEFINED IN JAGUAR.INC IT IS AT $D0210C.
+
+
+Message : 118 [Open] 3/10/93
+From    : Joe Jared
+To      : All
+Subject : Huffman Compression Engine
+Sig(s)  : 11
+
+The huffman compression engine is now ported over to the Atari ST/TT, and
+RSN there will be an object file to allow this compression to be used on
+both the Jaguar and in other software developer's utilities.  If anyone
+would like to kill some time, testing the compression utility and trying
+to break it would be appreciated.  When complete it will be a Free
+utility for Atari developers.
+
+
+Message : 124 [Open] 3/20/93
+From    : Joe Jared
+To      : All
+Subject : .Quad alignment
+Sig(s)  : 11
+
+    I noticed something that probably should make sense anyways, but
+thought I'd spout it out... During the developement of the compression
+engine, I noticed that the timings were unstable, even with '.even'
+alignment.  As an experiment, I made sure that all important loops were
+padded as necessary with NOP, and got a more consistant timing of the
+process.  If there is going to be any further developement on MADMAC, I'd
+like two features added, under the following guidelines:
+'.quad' or '.align #'
+if '.quad' and in the .text segment take one of 2 actions.
+If not already even aligned, error out with 'uneven memory, place ".even"
+at an appropriate place.  If the memory is not Quad aligned, then place
+the following line in its place
+dc.l    $4e71       ; nop for align 4
+If '.quad' is encountered in the .data segment, add
+dc.b    0, and dc.w 0 as needed to provide this alignment factor, and
+lastly, if in .bss, ds.b # where # is the number of bytes needed to force
+quad alignment.  Doing this by hand was a royal pain, and I see a 5%+
+improvement in speed by adding this feature to MADMac.
+ 
+The second suggestion has to do with Jaguar compatibility.  I don't see
+any option to provide 'phrase' alignment, and this too might help.  Maybe
+2 birds could be killed with one stone, where a 
+Macro QUAD
+        Align   4
+        endm
+could fill in the quad gap.  The most important detail to this alignment
+is that in .text that nop is placed where needed.
+
+
+Message : 125 [Open] 3/23/93
+From    : Joe Jared
+To      : All
+Subject : LZJAG026.lzh
+Sig(s)  : 11
+
+The Jaguar version is now ready.  Also enclosed is Makeraw, which may
+actually be unnecessary if raw binary files can be encluded.  

@@ -1,0 +1,17 @@
+;______________________________________________________________________________
+;Tables are positioned every 80 bytes. The first long word of an entry is
+;always the module type. A module type of zero indicates the end of the list.
+;A module type of -4 is skipped.
+
+;TIMELEFT	equ	D_RAM+16+12
+;MIDIvol         equ     D_RAM+12
+;EFFECTPOS       equ     D_RAM+$1ff0
+
+EFFBUFF         equ     $401000			; Used when there are effects
+BUFFLEN         equ     $ffff			; Used when there are effects
+
+;STACKPOS        equ     D_RAM+16
+TABLESTART      equ     D_RAM+$c00
+TABOFF          equ     20*4
+
+PATCHTAB	equ	$40000

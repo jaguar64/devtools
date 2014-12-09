@@ -1,0 +1,6 @@
+startup.o crzmain.o video.o objectsz.o jagcry.o
+joypad.o objlist.o gpu.o head.o eyecry.o mouth.o
+turtle.o sort.o txtcrz.o
+
+
+

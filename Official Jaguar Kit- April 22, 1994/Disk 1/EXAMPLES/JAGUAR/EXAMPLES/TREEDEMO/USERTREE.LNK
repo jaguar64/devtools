@@ -1,0 +1,3 @@
+startup.o jaguar.o video.o jagobj.o main.o alloc.o
+large.o vmemcpy.o bldchr.o font8x8.o usertree.o end.o
+

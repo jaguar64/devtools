@@ -1,0 +1,28 @@
+FILEFIX v6.0 - May 3, 1994
+--------------------------
+
+FILEFIX is a utility that converts an ABS executable file output by the ALN
+linker into separate files containing the raw data for the TEXT and DATA
+sections of the program, and a symbol table containing the symbol information
+for the program, and an RDBJAG script file for loading it all into the
+ALPINE board of a Jaguar Development System.
+
+Some developers have wondered why FILEFIX is needed, since RDBJAG can read
+ABS files directly.  Perhaps the most important reason is that when you want
+to build a Jaguar ROM or EPROM cartridge from your program, you need access
+to the raw data that cooresponds to what will become the ROM image of the
+cartridge.  FILEFIX makes this very easy and convenient.
+
+When you send a program to Atari that may end up becoming a cartridge (like
+an early version of a game), please use FILEFIX and send the resulting files
+rather than sending an ABS file (or in addition to sending an ABS file).
+
+
+Changes in this version:
+------------------------
+Earlier versions of FILEFIX could only deal with DRI-format ABS files.  This
+new version of FILEFIX now has the capability to read BSD/COFF format ABS
+files in addition to DRI format files.
+
+
+

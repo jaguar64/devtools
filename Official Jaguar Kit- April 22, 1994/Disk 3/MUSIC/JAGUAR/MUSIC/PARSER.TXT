@@ -1,0 +1,64 @@
+
+MIDI Parser Tool for ATARI Jaguar
+=================================
+
+FILES
+	parse.exe (for PC/MSDOS)
+	parse.ttp (for ATARI/TOS)
+	parse.cnf
+	notes.cnf
+
+
+OVERVIEW
+
+The MIDI parser is a command line program which translates a MIDI file into
+commands recognized by the Jaguar syntheziser. The output of the parser is
+an ASCII file containing the sound data for the synthesizer in assembly
+language format. This file has to be assembled and linked in with your
+program, playing the music.
+
+
+DESCRIPTION
+
+To parse a MIDI file, execute the program (PARSE.EXE or PARSE.TTP) from your
+command line (e.g. the MSDOS command prompt or the `Gulam' on the Atari):
+
+		parse [-q] [-o outputname] [inputname]
+
+The input file name is the file name of the MIDI file. If no file name is
+provided, parse looks for a file called `test.mid'. If not specified using
+the `-o' option, the file name of the output will be `test.out'. The `-q'
+option invokes the quite mode, suppressing messages about MIDI notes on/off.
+
+The created output file will have a list of assembly `dc.l' statements
+containg the music data for the synthesizer. The global pointer `scoretab'
+points to the beginning of the music data.
+
+
+The files `parse.cnf' and `notes.cnf' allow you to configure the parser.
+The `parse.cnf' file gives you the ability to have a certain pitch range
+change to a specific patch. Each line in `parse.cnf' contains one pitch
+range. The format of the line is:
+
+	channel:   pitch_range_start -  pitch_range_end   patch   pitch_offset
+
+Example:
+	0:	2 - 2	24	 64
+
+The `pitch_offset' parameter is an offset which will be added to pitch.
+Negative offset are possible, too. If you don't want an offset added,
+enter `0' into that field.
+
+Also, `parse.cnf' lets you set the maximum number of channels to be
+used. To do so, just enter the line
+
+	n = x
+
+(where x is the number of channels) into `parse.cnf'. Example:
+
+	n = 5
+
+The `Notes.cnf' contains the frequencies cooresponding to each note. Just
+change the file with a text editor if you need to do so.
+
+

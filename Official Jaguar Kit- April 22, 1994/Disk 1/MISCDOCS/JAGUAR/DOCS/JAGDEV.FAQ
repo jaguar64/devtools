@@ -1,0 +1,121 @@
+Some FAQ's and their answers about Jaguar development kit:
+
+Q:I don't understand something.
+A:Reread all the .txt and addendum text files, and the whole paper
+documentation :=).
+
+Q:I think I have found a bug or malfunction in MADMAC, ALN or RDBJAG.
+A:Try to get the last versions of all programs (always available on our
+bbs: +33 1 44670844). If it is still strange, contact us.
+
+Q:I want to start immediately a nop project, and I don't want to read
+all the documentation before.
+A:You should read all before, anyway these are the minimal steps:
+1) Type in your program (NOP ...) and save it as NOP.S.
+2) Assemble it with MAC.EXE by typing in command line "mac -fb nop.s".
+3) Link it with ALN.EXE by typing in command line "aln -e -a 4000 x x nop.o".
+4) Call RDBJAG by typing in command line "rdbjag nop".
+5) Step in you first instruction with the "t" command in RDBjAG.
+
+Q:When calling ALN during my make session, I have a make error:
+"Make error 2. ...".
+A:This means you have to many arguments in your DOS command line. Use
+the '-c <fname>' command line option instead.
+
+Q:When calling ALN during my make session, I have a ALN warning:
+"Warning: DATA segment size of MYPROG is not a phrase multiple".
+A:This means you haven't put a 'PEVEN' directive at the end of
+you last DATA section.
+
+Q:When I use ALN, I have doubly defined labels but only their 8 first
+caracters clash.
+A:Use MADMAC with '-fb' command line option.
+
+Q:When I use RDBJAG, debug labels are truncated to 8 caracters.
+A:Use ALN with '-e' command line option and MADMAC with '-fb'.
+
+Q:I don't know if I have the source level.
+A:Try 'mlist' under RDBJAG. If nothing happens, you're not in source level.
+
+Q:I want to have the source level.
+A:Use '-fb' and '-g' with MADMAC, '-e' and '-g' with ALN.
+
+Q:I have an external label used in a MOVEI instruction and MADMAC says
+"Error: Illegal (GPU/DSP) relocation type."
+A:Use '-fb' in command line.
+
+Q:I have an (not-orged) label used in a MOVEI instruction and MADMAC says
+"Error: Illegal (GPU/DSP) relocation type."
+A:Use '-fb' in command line.
+
+Q:I use a 'LIST' directive in my source, but no listing is output.
+A:Use the '-l' command line option.
+
+Q:I define an 'EQUR' and MADMAC is not happy.
+A:'Equr's can only be defined AND used in GPU/DSP sections.
+
+Q:I use a 'NLIST' directive and MADMAC is not happy.
+A:Use 'NOLIST' instead.
+
+Q:I use a 'UNDEFMAC' directive and MADMAC is not happy.
+A:Use 'MACUNDEF' instead.
+
+Q:I use a 'PHRASE' instruction and MADMAC is not happy.
+A:Use 'PEVEN' instead.
+
+Q:I use a 'ABS' instruction and MADMAC is not happy.
+A:Use 'OFFSET' instead.
+
+Q:Under RDBJAG, I have a small garbage following most of the ends of line.
+A:Those are ANSI escape sequences. You need ANSI.SYS in your CONFIG.SYS.
+
+Q:When I type in RDBJAG "load myprog.db", I have a "Not enough memory"
+error message, but I do have enough memory.
+A:You're using FILEFIX under DOS, that is no more needed. Watch the
+documentation text files again.
+
+Q:When I start RDBJAG, it prints "No bidirectional parallel port found!" and
+quits.
+A:Try twice. If it sticks to this error message, then:
+1) Turn on the Jaguar :=).
+2) Check your parallel cable and connections.
+3) Check if your parallel board is really bidirectionnal with parallel.exe.
+4) If nothing works, contact us.
+
+Q:Parallel.exe says that my parallel port is monodirectionnal, but the board's
+documentation pretends it to be bidirectional.
+A:
+1) Check the board configuration (switches, jumpers, etc...).
+2) Try the board on a different mother-board.
+3) Use another board.
+
+Q:Parallel.exe says that my parallel port is bidirectionnal, but RDBJAG still
+doesn't see it.
+A:Try twice. If it sticks to this error message, then use '-p# -d' in RDBJAG's
+command line, where # is the desired port's number (1,2,3).
+
+Q:I have more than one bidirectionnal parallel port, and I don't want that
+RDBJAG takes the first one.
+A:Use '-p#' in RDBJAG's command line, where # is the desired port's number
+(1,2,3).
+
+Q:I have a Jaguar plugged into LPT2, and I can't print on LPT1 after having
+started RDBJAG once.
+A:Use '-p2 -d' with RDBJAG.
+
+Q:I want to use the development kit on systems other than Atari or PC.
+A:Buy an Atari or PC emulator for your system, or send us the complete
+development tools/computer for your system.
+
+Q:I use a Sylvester on PC and RDBJAG doesn't work.
+A:That is true for the moment, use an Atari machine instead or switch to Alpine.
+
+
+For a quicker (and more precise) bug fix support, please use:
+for MADMAC:	raphael@brasil.frmug.fr.net
+for ALN:	alex@brasil.frmug.fr.net
+for RDBJAG:	laurent@brasil.frmug.fr.net
+or fax us to the attention of the above people at +33 1 44670811.
+
+
+Brainstorm.

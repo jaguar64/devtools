@@ -1,0 +1,8 @@
+#Created with FILEFIX version 5
+gag on
+read cdbios.txt 3000 ; read cdbios.dta 3800
+gag off
+echo "	start	size	end"
+echo "text	3000	3c0	33bf"
+echo "data	3800	8	3807"
+echo "bss	3808	0	3807"

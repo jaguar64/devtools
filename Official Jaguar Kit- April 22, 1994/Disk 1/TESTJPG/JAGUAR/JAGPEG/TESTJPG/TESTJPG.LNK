@@ -1,0 +1,8 @@
+-i dejag16.bin djag_gpu 
+-i dehuff.dat dhuf_abs 
+-i dq75.dat dq75_abs
+-i dq40.dat dq40_abs 
+-i dq25.dat dq25_abs 
+-i fish.jag fish_jpg 
+-i patrick.jag pat_jpg
+

@@ -1,0 +1,88 @@
+define	WMSG_NONE	0
+define	WMSG_INIT	1
+define	WMSG_EXIT	2
+define	WMSG_PRNT	3
+define	WMSG_CTXT	4
+define	WMSG_KBRD	5
+define	WMSG_MOUS	6
+define	WMSG_SIZE	7
+define	WMSG_LNLT	8
+define	WMSG_LNRT	9
+define	WMSG_LNUP	@10
+define	WMSG_LNDN	@11
+define	WMSG_PGLT	@12
+define	WMSG_PGRT	@13
+define	WMSG_PGUP	@14
+define	WMSG_PGDN	@15
+define	WMSG_HOME	@16
+define	WMSG_END	@17
+define	WMSG_INS	@18
+define	WMSG_DEL	@19
+define	WMSG_2TOP	@20
+define	WMSG_2BOT	@21
+define	WMSG_ADDG	@22
+define	WMSG_ADDS	@23
+define	WMSG_MEMM	@24
+define	WMSG_MEMR	@25
+define	WMSG_SYMR	@26
+define	WMSG_SYMM	@27
+define	WMSG_BRKM	@28
+define	WMSG_CHKM	@29
+define	WMSG_MODR	@30
+define	WMSG_MODM	@31
+
+global	lgaddr	lgsize
+set	lgaddr	lpeek(f02110)
+
+procedure lg addr
+	local	oldcpu
+
+	if	(`windmsg==WMSG_LNUP)	goto	lnup
+	if	(`windmsg==WMSG_LNDN)	goto	lndn
+	if	(`windmsg==WMSG_PGUP)	goto	pgup
+	if	(`windmsg==WMSG_PGDN)	goto	pgdn
+	if	(`windmsg==WMSG_ADDS)	goto	adds
+	if	(`windmsg>WMSG_CTXT)	goto	end
+#:prnt	set	oldcpu	discpu
+	set	discpu	$fe
+	l	lgaddr
+	set	lgsize	dissize
+	set	discpu	oldcpu
+	goto	end
+#:lnup
+	set	lgaddr	lgaddr-2
+	goto	prnt
+#:lndn
+	set	lgaddr	lgaddr+2
+	goto	prnt
+#:pgup
+	set	lgaddr	lgaddr-2*10
+	goto	prnt
+#:pgdn
+	set	lgaddr	lgaddr+lgsize
+	goto	prnt
+#:adds
+	if	(`argc==1)	set	lgaddr	addr
+	goto	prnt
+#:end
+.
+
+procedure wlg
+	local	x y w h
+
+	set	w	screenw/2
+	set	h	$c
+	set	x	screenw-w
+	set	y	screenh-h
+	windopen "Disassembly (GPU)" x y w h lg
+.
+
+alias	wr	windopen 1
+alias	wd	windopen 2
+alias	wm	windopen 3
+alias	ws	windopen 4
+alias	wv	windopen 5
+alias	wb	windopen 6
+alias	wc	windopen 7
+alias	wm	windopen 8
+alias	wdir	windopen 9

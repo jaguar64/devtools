@@ -1,0 +1,121 @@
+
+
+Jaguar Video and Clock Speeds
+
+
+The video system of Jaguar is programmable to within the precision of the
+supplied video clock.  In the Jaguar game console the video clock is chosen to
+allow an inexpensive modulator system.  In the interest of saving money the
+processor clock speed is the same as the video clock speed.  This requires a slightly
+different clock speed for NTSC and PAL system.  These numbers are as follows
+(Please note, more digits will be available later but these will probably not
+change.):
+
+	PAL	26.594 MHz
+	NTSC	26.591 MHz
+
+From this video clock the system then produces the pixel (or dot) clock.  The ratio
+between video and pixel clock is determined by high order bits of the VMODE
+register.  The possible values for the ratio are in the range 1-8.  The attached spread
+sheet contains the number of pixels that will fit within two different sized areas of
+a video screen.  The numbers are the same for NTSC and PAL.
+
+For both PAL and NTSC the "safe" video area is about 40 us wide.  The area
+required to guarantee overscan is about 50 us.  The spreadsheet gives the number
+of pixels that can be displayed within these times for all available pixel clock
+dividers.  Note that these numbers are not integers.  The numbers are also not even
+"nice" computer numbers like 320 or 256.
+
+We recommend that ALL software for the Jaguar console overscan both vertically
+and horizontally so for the rest of this discussion we will restrict ourselves to the
+OVERSCAN column.
+
+The first row (divisor of 1) requires that the object processor be started twice each
+line and produces a ridiculous resolution for a TV, it will be ignored.  The rest of
+the rows are all usable but two of them are special.  A divisor of three gives a non
+overscanned resolution of about 320.  This is a good match for many computer
+systems.  A divisor of four gives pixels that are about square.  Square pixels are a
+great advantage for art creation and we recommend their use.
+
+Let's look at the specific case of an overscanned game using square pixels.  This
+uses a pixel divisor of 4.  In both NTSC and PAL this allows for about 332 pixels to
+be displayed.  Choosing 320 gives us a <4% error.  Of these 320 pixels we should
+only count on the middle 266 being visible at all times.  This means that there is a
+border of 27 pixels on each side that are drawn but should not contain essential
+game information.
+
+The other pixel clock divisors that are of likely interest are 3 and 5.  In both of
+these cases the number of overscanned pixels is usably close to a blittable width:
+448 for a divisor of 3 and 256 for a divisor of 5.
+
+Note: The number to use as display width in VIDINIT is the one for a divisor of 1.
+Use 1330 for an overscanned display.
+
+To overscan vertically we suggest a screen height of 240 lines for NTSC and 288
+PAL.  This will alow for both PAL and NTSC users to see a fully overscanned image
+both vertically and horizontally.  The guaranteed visible region within which
+crucial game information is restricted is 200 lines for NTSC and 240 lines for PAL.
+Using 200 lines of critical video for both systems is a significant, and acceptable,
+simplification.
+
+
+	Pixel Divisor		Not Overscan	Overscan
+
+		1			1063.6		1329.5
+		2			531.8		664.8
+		3			354.5		443.2
+		4			265.9		332.4
+		5			212.7		265.9
+		6			177.3		221.6
+		7			151.9		189.9
+		8			132.9		166.2
+
+
+
+The End.
+
+;=========================================================================================================
+
+The following is an example of equates we use to set up our video:
+
+;*********** VIDEO ***********************************************
+
+vclk		equ	376
+
+horiz_per	equ	317778
+sync_per	equ	46050
+eq_per		equ	23500
+front_porch	equ	17450
+line_blank	equ	109500
+disp_width	equ	1347			;(pixel width + 1) * 3
+disp_height	equ	240			;this is in lines
+
+; Horizontal computations
+
+n_hp		equ	horiz_per/vclk
+n_hbb		equ	((horiz_per-sync_per-front_porch)/vclk)+$400
+n_hbe		equ	(line_blank-sync_per-front_porch)/vclk
+n_hs		equ	((horiz_per-sync_per)/vclk)+$400
+n_hvs		equ	(horiz_per-(2*sync_per))/vclk
+n_heq		equ	(horiz_per-eq_per)/vclk
+n_hde		equ	((disp_width/2)-1)+$400
+n_hdb1		equ	((n_hp)-(disp_width/2))
+n_hdb2		equ	n_hdb1
+
+n_vp		equ	523
+n_vee		equ	6
+n_vbe		equ	40
+n_vdb		equ	n_vbe-2			;n_vbe+4
+n_vde		equ	n_vdb+(disp_height*2)
+n_vbb		equ	n_vde
+n_vs		equ	n_vp-10
+n_veb		equ	n_vs-n_vee
+
+SCRN_TOP	equ	n_vdb			;ypos of first line at top of screen
+SCRN_BOTTOM	equ	n_vde			;xpos of first line below screen
+SCRN_RIGHT	equ	448			;xpos of first column off right side of screen
+
+;*******************************************************************
+
+
+

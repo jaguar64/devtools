@@ -1,0 +1,55 @@
+#====================================================================
+# Makefile      EXAMPLES
+#====================================================================
+
+#====================================================================
+#       Paths
+#====================================================================
+
+INC    = e:/jaguar/inc
+
+#====================================================================
+#       Macro & Assembler flags
+#====================================================================
+
+STADDR = 4000
+MACFLAGS = -fb -g
+ALNFLAGS = -v -v -e -l -a $(STADDR) x x
+CFLAGS  = $(DEFINES) $(CMODEL) $(OPT)
+
+#====================================================================
+#       Default Rules
+#====================================================================
+
+.SUFFIXES:      .o .c
+
+.c.o:
+	gcc -c $(CFLAGS) -o$@ $<
+
+.SUFFIXES:      .o .s
+
+.s.o:
+	mac $(MACFLAGS) $*
+
+.SUFFIXES:      .bin .gas
+
+.gas.o:
+	gasm -o -CGPU -I$(INC) -R1 $*
+	ltxconv -l $*
+
+#====================================================================
+
+OBJS = startup.o jaguar.o video.o \
+	  jagobj.o main.o alloc.o large.o vmemcpy.o bldchr.o font8x8.o
+
+all: userpic.abs usertree.abs
+
+userpic.abs: $(OBJS) userpic.o bird1.o lotus.o end.o
+	aln $(ALNFLAGS) -o userpic.abs -c userpic.lnk
+
+usertree.abs: $(OBJS) usertree.o end.o
+	aln $(ALNFLAGS) -o usertree.abs -c usertree.lnk
+
+userpic.o:      userpic.c jagobj.h
+usertree.o:     usertree.c jagobj.h
+jagobj.o:       jagobj.c jagobj.h

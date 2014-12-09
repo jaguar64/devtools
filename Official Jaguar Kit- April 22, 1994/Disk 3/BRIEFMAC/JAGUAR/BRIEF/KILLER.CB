@@ -1,0 +1,60 @@
+
+// Places a comment at the start of the current line
+// and moves to following line.
+shaunkiller (...)
+{
+	string	this_line;
+	int		curr_line,
+				start_line,
+				start_col,
+				end_line,
+				end_col;
+
+		if	(inq_marked(start_line,start_col,end_line,end_col))
+			{
+			save_position();
+			curr_line = start_line;
+			while (curr_line <= end_line)
+				{
+				move_abs (curr_line,1);
+				killer_line(curr_line);
+				curr_line++;		
+				}
+			raise_anchor();
+			restore_position();
+			}
+		else
+			{
+			inq_position(start_line,start_col);
+			beginning_of_line ();
+			killer_line(curr_line);
+			down ();
+			move_abs(0,start_col);
+			}
+}
+
+killer_line (curr_line)
+{
+	string	this_line="",
+				new_line="";
+	int		pos,
+				posx,
+				curr_line;
+
+				this_line = trim(read());
+				pos = index(this_line,"\@");
+				if (pos != 0)
+					{
+					new_line = (substr (this_line,1,pos-1))+"(";
+					posx = rindex(this_line,"\,");
+					if	(posx != 0)
+						{
+						new_line = new_line+(substr (this_line,pos+1,posx-pos-1));
+						new_line = new_line+")"+(substr(this_line,posx));
+						move_abs (0,1);
+						delete_to_eol();
+						insert(new_line);
+						}
+					}
+}
+

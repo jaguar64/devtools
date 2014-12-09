@@ -1,0 +1,53 @@
+#====================================================================
+# 1) Change paths to match your system...
+#    (remember to use forward slashes because of !@%^*! GNU-Make)
+#====================================================================
+
+INC    = e:/jaguar/inc
+
+#====================================================================
+#	Macro & Assembler flags
+#====================================================================
+
+ROMFLAGS = -l -a 802000 x 4000
+
+#====================================================================
+#	Default Rules
+#====================================================================
+
+.SUFFIXES:	.scr .mid
+
+.mid.scr:
+	parse -q $*.mid
+	mac -o $*.scr $*.out
+	rm $*.out
+
+.SUFFIXES:	.o .s
+
+.s.o:
+	mac $*
+
+.SUFFIXES:	.bnd .das
+
+.das.bnd:
+	gasm -I$(INC) -o -S -CDSP $*.das
+	ltxconv -h $*
+	mv $*.bin $*.bnd
+	rm $*.ltx
+
+.SUFFIXES:	.oj .das
+
+.das.oj:
+	gasm -I$(INC) -o -S -CDSP $*.das
+	ltxconv -l$* -otgasm $*
+	mv tgasm.o $*.oj
+	rm $*.ltx
+	
+
+#====================================================================
+#	EXECUTABLES
+#====================================================================
+
+test.abs: test.o fulsyn.oj tables.oj echo.oj test.scr
+	aln $(ROMFLAGS) test.o fulsyn.oj tables.oj  echo.oj test.scr \
+		-i clsd_hat.raw c_hi_hat

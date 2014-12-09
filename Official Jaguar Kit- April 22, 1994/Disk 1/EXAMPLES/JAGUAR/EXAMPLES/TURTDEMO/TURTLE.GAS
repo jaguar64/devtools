@@ -1,0 +1,577 @@
+;*======================================================================*
+;*                TITLE:       TURTLE.GAS                               *
+;*                Function:    Turtle Geometry Rotation and Translation *
+;*                                                                      *
+;*                Project #:              RAPIER                        *
+;*                Programmer:             Rob Zdybel                    *
+;*                                                                      *
+;*            COPYRIGHT 1993 Atari Computer Corporation                 *
+;*          UNATHORIZED REPRODUCTION, ADAPTATION, DISTRIBUTION,         *
+;*          PERFORMANCE OR DISPLAY OF THIS COMPUTER PROGRAM OR          *
+;*        THE ASSOCIATED AUDIOVISUAL WORK IS STRICTLY PROHIBITED.       *
+;*                            ALL RIGHTS RESERVED.                      *
+;*                                                                      *
+;*======================================================================*
+
+;
+;	DATA ORGANIZATION
+;
+
+;
+;   	        +-------------------+	 +---------------+
+;   	        |  Xrite  |  Yrite  |<---|  PTR to ARG1  | INPUT1
+;   	        +-------------------+	 +---------------+
+;   	        |  Zrite  |  Xdown  |
+;   	        +-------------------+	Turtle Record
+;   	        |  Ydown  |  Zdown  |
+;   	        +-------------------+
+;   	        |  Xhead  |  Yhead  |
+;   	        +-------------------+
+;   	        |  Zhead  |  Xposn  |
+;   	        +-------------------+
+;   	        |  Yposn  |  Zposn  |
+;   	        +-------------------+
+;                        ...         
+;   	        +-------------------+
+;   	        |  Pitch (Brads)    |   INPUT2 (16-bits)
+;   	        +-------------------+
+;   	        |  Yaw (Brads)      |   INPUT3 (16-bits)
+;   	        +-------------------+
+;   	        |  Roll (Brads)     |   INPUT4 (16-bits)
+;   	        +-------------------+
+;   	        |  Velocity         |   INPUT5 (16-bits)
+;   	        +-------------------+
+;
+
+;
+;	COMMON EQUATES
+;
+
+	.data
+	.gpu
+	.nojpad
+DEBUG_ON	.equ	0
+	.nolist
+	.include "jaguar.inc"
+	.include "blit.inc"
+	.include "gpu.inc"
+	.include "macros.inc"
+	.list
+TURTLPAK::
+	.dc.l	G_RAM
+	.dc.l	EndGPU-StartGPU
+
+PTRSIZE		.equ	(1*4)		; 1 LONG
+INPUT6		.equ	G_ENDRAM-PTRSIZE
+INPUT5		.equ	INPUT6-PTRSIZE
+INPUT4		.equ	INPUT5-PTRSIZE
+INPUT3		.equ	INPUT4-PTRSIZE
+INPUT2		.equ	INPUT3-PTRSIZE
+INPUT1		.equ	INPUT2-PTRSIZE
+
+	
+	.org	G_RAM
+StartGPU:
+
+;
+;	GLOBAL REGISTER EQUATES
+;
+temp		.equr	r0
+temp2		.equr	r1
+ptr		.equr	r2
+
+pitch		.equr	r3
+yaw		.equr	r4
+roll		.equr	r5
+velocity	.equr	r6
+
+half		.equr	r7
+
+xrite		.equr	r10
+yrite		.equr	r11
+zrite		.equr	r12
+xdown		.equr	r13
+ydown		.equr	r14
+zdown		.equr	r15
+xhead		.equr	r16
+yhead		.equr	r17
+zhead		.equr	r18
+xposn		.equr	r19
+yposn		.equr	r20
+zposn		.equr	r21
+
+sin		.equr	r22
+cos		.equr	r23
+rpi2		.equr	r24
+rsintbl		.equr	r25
+rcos		.equr	r26
+rsin		.equr	r27
+return		.equr	r28
+
+
+;
+;	LOCAL MACROS
+;
+
+;	NOTE: Dedicated Subroutine calls expect the proper
+;	      registers to be pre-set. No Nesting!
+
+	.macro	JSR_SIN
+	move	PC,return
+	jump	T,(rsin)
+	addq	#6,return	; Determine Return Address
+	.endm
+
+	.macro	JSR_COS
+	move	PC,return
+	jump	T,(rcos)
+	addq	#6,return	; Determine Return Address
+	.endm
+
+	.macro	SIN_RTS
+	jump	T,(return)
+	.endm
+
+;
+;	CODE SEGMENT
+;
+
+;
+;	System Initialization
+;
+	
+	DEBUG_INIT
+
+	moveq	#1,half
+	movei	#sine,rsin
+	shlq	#13,half		; Half of One ($2000)
+	movei	#cosine,rcos
+	moveq	#4,rpi2
+	movei	#sintbl,rsintbl
+	shlq	#4,rpi2			; RPI2 = Pi/2 ($40 in Brads)
+
+	movei	#INPUT1,ptr
+	load	(ptr),temp		; TEMP = 68000 ptr to active Turtle
+	addq	#4,ptr
+	load	(ptr),pitch		; PITCH = Amount to Pitch the Turtle
+	addq	#4,ptr
+	load	(ptr),yaw		; YAW = Amount to Yaw the Turtle
+	addq	#4,ptr
+	load	(ptr),roll		; ROLL = Amount to Roll the Turtle
+	addq	#4,ptr
+	load	(ptr),velocity		; VELOCITY = Amount to Move the Turtle
+	shlq	#16,velocity
+	sharq	#16,velocity		; Sign-extend Velocity
+
+	loadw	(temp),xrite		; Fetch Turtle into registers
+	addq	#2,temp
+	loadw	(temp),yrite
+	addq	#2,temp
+	shlq	#16,xrite
+	shlq	#16,yrite
+	sharq	#16,xrite		; And sign-extend to 32-bits
+	sharq	#16,yrite
+	loadw	(temp),zrite
+	addq	#2,temp
+	loadw	(temp),xdown
+	addq	#2,temp
+	shlq	#16,zrite
+	shlq	#16,xdown
+	sharq	#16,zrite
+	sharq	#16,xdown
+	loadw	(temp),ydown
+	addq	#2,temp
+	loadw	(temp),zdown
+	addq	#2,temp
+	shlq	#16,ydown
+	shlq	#16,zdown
+	sharq	#16,ydown
+	sharq	#16,zdown
+	loadw	(temp),xhead
+	addq	#2,temp
+	loadw	(temp),yhead
+	addq	#2,temp
+	shlq	#16,xhead
+	shlq	#16,yhead
+	sharq	#16,xhead
+	sharq	#16,yhead
+	loadw	(temp),zhead
+	addq	#2,temp
+	loadw	(temp),xposn
+	addq	#2,temp
+	shlq	#16,zhead
+	shlq	#16,xposn
+	sharq	#16,zhead
+	sharq	#16,xposn
+	loadw	(temp),yposn
+	addq	#2,temp
+	loadw	(temp),zposn
+	shlq	#16,yposn
+	shlq	#16,zposn
+	sharq	#16,yposn
+	sharq	#16,zposn
+
+;
+;	PITCH (Rotation about the X-Axis)
+;
+	cmpq	#0,pitch
+	jr	NE,ipitch
+	nop
+	movei	#iyaw,temp
+	jump	T,(temp)
+	nop
+ipitch:					; IF (Pitch <> 0) THEN Pitch the Turtle
+	move	pitch,temp
+	JSR_SIN
+	move	temp,sin		; SIN = SINE(Pitch)
+	move	pitch,temp
+	JSR_COS
+	move	temp,cos		; COS = COSINE(Pitch)
+
+	move	sin,temp2
+	imult	xdown,temp		; TEMP = xdown*cos(a)
+	imult	xhead,temp2
+	sub	temp2,temp		; TEMP = xdown*cos(a) - xhead*sin(a)
+	move	sin,temp2
+	add	half,temp
+	sharq	#14,temp
+	imult	xdown,temp2		; TEMP2 = xdown*sin(a)
+	move	temp,xdown		; XDOWN = xdown*cos(a) - xhead*sin(a)
+	move	cos,temp
+	imult	xhead,temp
+	add	temp2,temp		; TEMP = xhead*cos(a) + xdown*sin(a)
+	add	half,temp
+ 	sharq	#14,temp
+	move	temp,xhead		; XHEAD = xhead*cos(a) + xdown*sin(a)
+
+	move	cos,temp
+	move	sin,temp2
+	imult	ydown,temp		; TEMP = ydown*cos(a)
+	imult	yhead,temp2
+	sub	temp2,temp		; TEMP = ydown*cos(a) - yhead*sin(a)
+	move	sin,temp2
+	add	half,temp
+	sharq	#14,temp
+	imult	ydown,temp2		; TEMP2 = ydown*sin(a)
+	move	temp,ydown		; YDOWN = ydown*cos(a) - yhead*sin(a)
+	move	cos,temp
+	imult	yhead,temp
+	add	temp2,temp		; TEMP = yhead*cos(a) + ydown*sin(a)
+	add	half,temp
+ 	sharq	#14,temp
+	move	temp,yhead		; YHEAD = yhead*cos(a) + ydown*sin(a)
+
+	move	cos,temp
+	move	sin,temp2
+	imult	zdown,temp		; TEMP = zdown*cos(a)
+	imult	zhead,temp2
+	sub	temp2,temp		; TEMP = zdown*cos(a) - zhead*sin(a)
+	move	sin,temp2
+	add	half,temp
+	sharq	#14,temp
+	imult	zdown,temp2		; TEMP2 = zdown*sin(a)
+	move	temp,zdown		; ZDOWN = zdown*cos(a) - zhead*sin(a)
+	move	cos,temp
+	imult	zhead,temp
+	add	temp2,temp		; TEMP = zhead*cos(a) + zdown*sin(a)
+	add	half,temp
+ 	sharq	#14,temp
+	move	temp,zhead		; ZHEAD = zhead*cos(a) + zdown*sin(a)
+
+;
+;	YAW (Rotation about the Y-Axis)
+;
+iyaw:
+	cmpq	#0,yaw
+	jr	NE,.10
+	nop
+	movei	#iroll,temp
+	jump	T,(temp)
+	nop
+.10:					; IF (Yaw <> 0) THEN Yaw the Turtle
+	move	yaw,temp
+	JSR_SIN
+	move	temp,sin		; SIN = SINE(Yaw)
+	move	yaw,temp
+	JSR_COS
+	move	temp,cos		; COS = COSINE(Yaw)
+
+	move	sin,temp2
+	imult	xhead,temp		; TEMP = xhead*cos(a)
+	imult	xrite,temp2
+	sub	temp2,temp		; TEMP = xhead*cos(a) - xrite*sin(a)
+	move	sin,temp2
+	add	half,temp
+	sharq	#14,temp
+	imult	xhead,temp2		; TEMP2 = xhead*sin(a)
+	move	temp,xhead		; XHEAD = xhead*cos(a) - xrite*sin(a)
+	move	cos,temp
+	imult	xrite,temp
+	add	temp2,temp		; TEMP = xrite*cos(a) + xhead*sin(a)
+	add	half,temp
+ 	sharq	#14,temp
+	move	temp,xrite		; XRITE = xrite*cos(a) + xhead*sin(a)
+
+	move	cos,temp
+	move	sin,temp2
+	imult	yhead,temp		; TEMP = yhead*cos(a)
+	imult	yrite,temp2
+	sub	temp2,temp		; TEMP = yhead*cos(a) - yrite*sin(a)
+	move	sin,temp2
+	add	half,temp
+	sharq	#14,temp
+	imult	yhead,temp2		; TEMP2 = yhead*sin(a)
+	move	temp,yhead		; YHEAD = yhead*cos(a) - yrite*sin(a)
+	move	cos,temp
+	imult	yrite,temp
+	add	temp2,temp		; TEMP = yrite*cos(a) + yhead*sin(a)
+	add	half,temp
+ 	sharq	#14,temp
+	move	temp,yrite		; YRITE = yrite*cos(a) + yhead*sin(a)
+
+	move	cos,temp
+	move	sin,temp2
+	imult	zhead,temp		; TEMP = zhead*cos(a)
+	imult	zrite,temp2
+	sub	temp2,temp		; TEMP = zhead*cos(a) - zrite*sin(a)
+	move	sin,temp2
+	add	half,temp
+	sharq	#14,temp
+	imult	zhead,temp2		; TEMP2 = zhead*sin(a)
+	move	temp,zhead		; ZHEAD = zhead*cos(a) - zrite*sin(a)
+	move	cos,temp
+	imult	zrite,temp
+	add	temp2,temp		; TEMP = zrite*cos(a) + zhead*sin(a)
+	add	half,temp
+ 	sharq	#14,temp
+	move	temp,zrite		; ZRITE = zrite*cos(a) + zhead*sin(a)
+
+;
+;	ROLL (Rotation about the Z-Axis)
+;
+iroll:
+	cmpq	#0,roll
+	jr	NE,.10
+	nop
+	movei	#imove,temp
+	jump	T,(temp)
+	nop
+.10:					; IF (Roll <> 0) THEN Roll the Turtle
+	move	roll,temp
+	JSR_SIN
+	move	temp,sin		; SIN = SINE(Roll)
+	move	roll,temp
+	JSR_COS
+	move	temp,cos		; COS = COSINE(Roll)
+
+	move	sin,temp2
+	imult	xrite,temp		; TEMP = xrite*cos(a)
+	imult	xdown,temp2
+	sub	temp2,temp		; TEMP = xrite*cos(a) - xdown*sin(a)
+	move	sin,temp2
+	add	half,temp
+	sharq	#14,temp
+	imult	xrite,temp2		; TEMP2 = xrite*sin(a)
+	move	temp,xrite		; XRITE = xrite*cos(a) - xdown*sin(a)
+	move	cos,temp
+	imult	xdown,temp
+	add	temp2,temp		; TEMP = xdown*cos(a) + xrite*sin(a)
+	add	half,temp
+ 	sharq	#14,temp
+	move	temp,xdown		; XDOWN = xdown*cos(a) + xrite*sin(a)
+
+	move	cos,temp
+	move	sin,temp2
+	imult	yrite,temp		; TEMP = yrite*cos(a)
+	imult	ydown,temp2
+	sub	temp2,temp		; TEMP = yrite*cos(a) - ydown*sin(a)
+	move	sin,temp2
+	add	half,temp
+	sharq	#14,temp
+	imult	yrite,temp2		; TEMP2 = yrite*sin(a)
+	move	temp,yrite		; YRITE = yrite*cos(a) - ydown*sin(a)
+	move	cos,temp
+	imult	ydown,temp
+	add	temp2,temp		; TEMP = ydown*cos(a) + yrite*sin(a)
+	add	half,temp
+ 	sharq	#14,temp
+	move	temp,ydown		; YDOWN = ydown*cos(a) + yrite*sin(a)
+
+	move	cos,temp
+	move	sin,temp2
+	imult	zrite,temp		; TEMP = zrite*cos(a)
+	imult	zdown,temp2
+	sub	temp2,temp		; TEMP = zrite*cos(a) - zdown*sin(a)
+	move	sin,temp2
+	add	half,temp
+	sharq	#14,temp
+	imult	zrite,temp2		; TEMP2 = zrite*sin(a)
+	move	temp,zrite		; ZRITE = zrite*cos(a) - zdown*sin(a)
+	move	cos,temp
+	imult	zdown,temp
+	add	temp2,temp		; TEMP = zdown*cos(a) + zrite*sin(a)
+	add	half,temp
+ 	sharq	#14,temp
+	move	temp,zdown		; ZDOWN = zdown*cos(a) + zrite*sin(a)
+
+;
+;	MOVE (Translation along the HEAD vector)
+;
+imove:
+	cmpq	#0,velocity
+	move	velocity,temp
+	jr	EQ,idone
+	move	velocity,temp2		; IF (Velocity <> 0) THEN Move the Turtle
+	imult	xhead,temp
+	imult	yhead,temp2
+	add	half,temp
+	add	half,temp2
+	sharq	#14,temp
+	sharq	#14,temp2
+	add	temp,xposn		; Xpos = Xpos + Vel*Xhead
+	add	temp2,yposn		; Ypos = Ypos + Vel*Yhead
+	imult	zhead,velocity
+	add	half,velocity
+	sharq	#14,velocity
+	add	velocity,zposn		; Zpos = Zpos + Vel*Zhead
+
+;
+;	Write Final Rotated and Translated Turtle Record
+;
+idone:
+	movei	#INPUT1,ptr
+	load	(ptr),temp		; TEMP = 68000 ptr to active Turtle
+	storew	xrite,(temp)
+	addq	#2,temp
+	storew	yrite,(temp)		; Write back turtle
+	addq	#2,temp
+	storew	zrite,(temp)
+	addq	#2,temp
+	storew	xdown,(temp)
+	addq	#2,temp
+	storew	ydown,(temp)
+	addq	#2,temp
+	storew	zdown,(temp)
+	addq	#2,temp
+	storew	xhead,(temp)
+	addq	#2,temp
+	storew	yhead,(temp)
+	addq	#2,temp
+	storew	zhead,(temp)
+	addq	#2,temp
+	storew	xposn,(temp)
+	addq	#2,temp
+	storew	yposn,(temp)
+	addq	#2,temp
+	storew	zposn,(temp)
+
+;
+;	Prepare for GPU RTS
+;
+gpuend:
+	movei	#G_CTRL,temp2		; GPU control/status register
+	load	(temp2),temp
+	bclr	#0,temp			; clear GPUGO bit
+	store	temp,(temp2)		; stop the GPU
+
+endloop:
+	jr	T,endloop			; infinite loop
+	nop
+
+
+;
+;	SUBROUTINE AREA
+;
+
+;
+;	COSINE   16-bit table lookup Cosine
+;
+;	GIVEN:
+;		TEMP = Angle (Binary Radians 0..255)
+;		RPI2 = PI/2 ($40 in Brads)
+;		RSINTBL = Ptr to Sine Table
+;
+;	RETURNS:
+;		TEMP = Cos(Angle)*$4000
+;
+;	REGISTER USAGE:
+;		ptr, temp, temp2
+;
+cosine:
+	add	rpi2,temp	; Cos(a) = Sin(a + pi/2)
+;
+;	*CAUTION* Fall Thru to SINE Subroutine *CAUTION*
+;
+
+
+;
+;	SINE   16-bit table lookup Sine
+;
+;	GIVEN:
+;		TEMP = Angle (Binary Radians 0..255)
+;		RPI2 = PI/2 ($40 in Brads)
+;		RSINTBL = Ptr to Sine Table
+;
+;	RETURNS:
+;		TEMP = Sin(Angle)*$4000
+;
+;	REGISTER USAGE:
+;		ptr, temp, temp2
+;
+sine:
+	shlq	#24,temp	; Strip any extraneous bits
+	move	rsintbl,ptr
+	jr	MI,.69
+	shrq	#24,temp	; IF (Angle < Pi) THEN
+	cmp	temp,rpi2
+	jr	PL,.49		; IF (Angle > Pi/2) THEN Reduce it
+	move	rpi2,temp2
+	shlq	#1,temp2	; TEMP2 = Pi ($80 in Brads)
+	sub	temp,temp2	; Sin(pi/2 + a) = Sin(pi/2 -a)
+	move	temp2,temp
+.49:	shlq	#2,temp
+	add	temp,ptr
+	SIN_RTS
+	load	(ptr),temp	; TEMP = Table Lookup Result
+.69:				; ELSE (Angle >= Pi)
+	bclr	#7,temp		; TEMP = TEMP - $80
+	cmp	temp,rpi2
+	jr	PL,.99		; IF (Angle > Pi/2) THEN Reduce it
+	move	rpi2,temp2
+	shlq	#1,temp2	; TEMP2 = Pi ($80 in Brads)
+	sub	temp,temp2	; Sin(pi/2 + a) = Sin(pi/2 -a)
+	move	temp2,temp
+.99:	shlq	#2,temp
+	add	temp,ptr
+	load	(ptr),temp	; TEMP = Table Lookup
+	SIN_RTS
+	neg	temp		; Sin(a) = -1*Sin(a - pi)
+
+
+;
+;	CONSTANT DATA
+;
+
+	.long
+
+sintbl: 	; Lookup Table for Trigonometry
+	
+	.dc.l	$0000,$0195,$0329,$04b0,$0647,$07d4,$0962,$0af0
+	.dc.l	$0c7d,$0e05,$0f8d,$1110,$1292,$1414,$1590,$1709
+	.dc.l	$187e,$19f0,$1b5d,$1cc6,$1e2c,$1f8b,$20e7,$223e
+	.dc.l	$238e,$24da,$2620,$2760,$289a,$29ce,$2afb,$2c21
+	.dc.l	$2d41,$2e5a,$2f6c,$3076,$3179,$3274,$3368,$3453
+	.dc.l	$3537,$3612,$36e5,$37b0,$3871,$392b,$39db,$3a82
+	.dc.l	$3b21,$3bb6,$3c42,$3cc5,$3d3f,$3daf,$3e15,$3e72
+	.dc.l	$3ec5,$3f0f,$3f4f,$3f85,$3fb1,$3fd4,$3fec,$3ffb
+	.dc.l	$4000
+
+	.phrase		; this is VERY IMPORTANT TO HAVE HERE IF YOU USE THE
+			; LINKER to include a *.BIN file via -iFILENAME LABELNAME 
+
+EndGPU:
+	.end
+
+;*======================================================================*
+;*                                 EOF                                  *
+;*======================================================================*
