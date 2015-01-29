@@ -1,0 +1,4 @@
+Unpack the zip files with 7-zip for example.
+Open de file .001 and the other splitfiles will automaticly unpack.
+
+We had to split these files because of the 100MB file limit of github.
