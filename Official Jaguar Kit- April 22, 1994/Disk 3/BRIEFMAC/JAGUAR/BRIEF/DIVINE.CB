@@ -1,0 +1,159 @@
+
+// Places a comment at the start of the current line
+// and moves to following line.
+
+scp_comment (...)
+{
+	string	this_line;
+	int		curr_line,
+				start_line,
+				start_col,
+				end_line,
+				end_col;
+
+		if	(inq_marked(start_line,start_col,end_line,end_col))
+			{
+			save_position();
+			curr_line = start_line;
+			while (curr_line <= end_line)
+				{
+				move_abs (curr_line,1);
+				comment_line();
+				curr_line++;		
+				}
+			raise_anchor();
+			restore_position();
+			}
+		else
+			{
+			inq_position(start_line,start_col);
+			beginning_of_line ();
+			comment_line();
+			down ();
+			move_abs(0,start_col);
+			}
+		message ("Designer Comments by Divine Intervention...");
+}
+
+// Comment out current line
+comment_line (void)
+{
+				if	( (substr(read(),1,1)) != ";")
+					insert (";");
+				else
+					if	( (substr(read(),2,1)) != "*")
+						{
+						move_abs (0,2);
+						insert ("*");
+						}
+}
+
+// Removes comment from the start of the current line
+// and moves to following line.
+
+
+
+mjt_line (...)
+{
+	beginning_of_line();
+	insert(";----------------------------------------------------------------------\n\n");
+}	
+mjt_line2 (...)
+{
+	int line,
+		 column;
+
+	string filename;
+	beginning_of_line();
+	insert(";----------------------------------------------------------------------\n");
+	insert("                                                                       \n");        
+	insert("                                                                       \n");        
+	insert(";----------------------------------------------------------------------\n\n");
+			inq_position (line, column);
+			inq_names (filename);
+	
+		_fl_insert_pos (line,column,filename);
+	up();
+	up();
+	up();
+	up();
+	end_of_line();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	left();
+	insert(";");
+}
+
+
+scp_uncomment (...)
+{
+	string	this_line;
+	int		curr_line,
+				start_line,
+				start_col,
+				end_line,
+				end_col;
+
+		if	(inq_marked(start_line,start_col,end_line,end_col))
+			{
+			save_position();
+			curr_line = start_line;
+			while (curr_line <= end_line)
+				{
+				move_abs (curr_line,1);
+				uncomment_line();
+				curr_line++;		
+				}
+			raise_anchor();
+			restore_position();
+			}
+		else
+			{
+			inq_position(start_line,start_col);
+			beginning_of_line ();
+			uncomment_line();
+			down ();
+			move_abs(0,start_col);
+			}
+		message ("Comments Removed by Divine Intervention...");
+}
+
+// remove Comment from current line
+uncomment_line (void)
+{
+		if	((substr (read(),1,2)) == ";*")
+			{
+			move_abs (0,2);
+			delete_char();
+			}
+		else
+			if	( (substr(read(),1,1)) == ";")
+				delete_char ();
+
+}

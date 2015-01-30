@@ -1,0 +1,17 @@
+This is the third release of the music tools.
+
+The changes from release one include:
+	The compressed sample module now works (sorry 'bout that)
+	The number of voices used by the music driver can be changed (see parse.cnf)
+	Samples can be fine tuned, put the pitch adjustment in the pitch field $1000=>No change
+	Parse takes a -q option to prevent the note by note output
+	The Sound Tool SNDTOOL now allows easy creation of complex user waveforms
+	A Volume parameter has been added for the Music interpreter
+	The Sample rate can be changed
+
+The changes from release two include:
+	There is sample code showing how to add other voice types or effects. The sample is an echo.
+	There is a new parameter, PATCHLOC. This allows patches to be placed anywhere.
+	The doc MUSICDRV.RTF has been expanded
+
+

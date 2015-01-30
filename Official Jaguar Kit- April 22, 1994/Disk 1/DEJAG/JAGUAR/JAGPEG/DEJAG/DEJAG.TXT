@@ -1,0 +1,193 @@
+---------
+DEJAG 1.6
+---------
+
+Copyright 1993 Atari Corp. All Rights Reserved.
+Author: Mike Pooler, Atari Corp.
+Update: Mike Fulton, Atari Corp.
+Release Date: 2/18/94
+
+CONFIDENTIAL.
+
+--------------------------------------------------------------------------
+
+DEJAG uncompresses a JagPeg graphic file. It a routine that runs in the 
+Jaguar's GPU.  There are two versions of the DEJAG program, DEJAG16.BIN and 
+DEJAG24.BIN.  They work the same way except:
+
+DEJAG16.BIN:  Produces 16 bit-per-pixel output
+
+DEJAG24.BIN:  Produces 24 bit-per-pixel output (32-bit format GxRB).
+
+Use the one that corresponds to the video mode you are working in.
+
+Note that the input to JagPeg (the .JAG file) itself is THE SAME whether it is 
+being uncompressed and/or viewed at 16 or 24 bits.
+
+--------------------------------------------------------------------------
+
+To use DEJAG: (These steps are described in detail below.)
+
+1. Put DEJAG16.BIN or DEJAG24.BIN (the GPU program) into GPU RAM
+
+2. Have the DEHUFF.DAT table in memory
+
+3. Have a DQ??.DAT table in GPU ram at DQ_Adr
+
+4. Have the JagPeg picture data in memory
+
+5. Pass the appropriate parameters to DEJAG via the variables in GPU RAM
+   described below and in DEJAG.INC
+
+6. Set the GPU instruction pointer to the top of GPU RAM, start the GPU
+
+7. Optionally wait for the GPU to finish (Obviously an important step if
+   you're going to use it for something else after showing the picture).
+
+Note: The order of steps 1 to 5 is not important, but they all must
+preceed step 6.
+
+There is a sample program included that demonstrates how to decompress and 
+display a picture file using the DEJAG routines.  It essentially illustrates 
+the steps detailed below:
+
+--------------------------------------------------------------------------
+Details:
+--------------------------------------------------------------------------
+
+1. Load DEJAG16.BIN or DEJAG24.BIN (the GPU program) into GPU RAM. You should 
+know how to do this.  You can also examine the sample program source code.
+
+--------------------------------------------------------------------------
+
+2. Prepare the DEHUFF.DAT file, have its contents in memory
+
+Preparing DEHUFF.DAT with LOCATE.TTP
+------------------------------------
+
+DEHUFF.DAT is a data table that DEJAG uses during decompression. The table must 
+be somewhere in memory (it won't fit in GPU RAM).  You cannot use the 
+DEHUFF.DAT as it is provided to you. You must first alter it with the LOCATE 
+program (LOCATE.EXE for the PC, or LOCATE.TTP for the Atari).
+
+DEHUFF.DAT has absolute pointers to itself. Therefore, it has to be altered to 
+work at any specific memory location.  You must decide in advance where 
+DEHUFF.DAT will reside, and then run LOCATE with that address.  For example:
+
+LOCATE 50000
+
+This will alter DEHUFF.DAT so that it works when loaded starting at memory 
+location $00050000. Note that (DEHUFF.DAT should be in the same directory as 
+LOCATE when you run it).
+
+You can run LOCATE again at any time if you need to change the address again.  
+Note that the address parameter is taken to be in HEX, even if you don't 
+preceed it with 0x (which works) or $ (which doesn't work anyway).
+
+DEJAG also needs to know where to find DEHUFF.DAT. You pass the address as a 
+parameter, described in step 5.
+
+--------------------------------------------------------------------------
+
+3. Have a DQ??.DAT table in GPU RAM at DQ_Adr.
+
+Each picture is compressed at a certain "quality" setting (as decribed in 
+TGAJAG.DOC). For every quality setting, there is a corresponding DQ??.DAT file, 
+where "??" is a number cooresponding to this setting. For example, when you 
+create a JagPeg file with quality 75 (the default) DQ75.DAT is created along 
+with the *.JAG file.
+
+When you decompress the image, DEJAG needs the corresponding DQ??.DAT file. To 
+decompress any JagPeg that was compressed with quality 75, use DQ75.DAT.  For 
+JagPegs created with quality 60, use DQ60.DAT.  And so on.
+
+The DQ??.DAT file must be loaded at address the DQ_Adr, which is a constant 
+defined in DEJAG.INC (it is a memory location within GPU RAM).
+
+Note that if you are decompressing a number of pictures that were all 
+compressed at the same quality, you only need to load the DQ??.DAT into GPU RAM 
+once.  If each picture has a different quality setting, you have to load a 
+different DQ??.DAT before decompressing each picture.
+
+If you make a mistake, the resulting picture will be either too bright or too 
+dark. (For example, if DQ60.DAT is at DQ_Adr when you decompress a picture 
+compressed at quality 75).
+
+--------------------------------------------------------------------------
+
+4. Have the JagPeg data in memory
+
+TGAJAG produces the JagPeg file (with a .JAG extension). The contents of the 
+JagPeg file must be in memory.
+
+--------------------------------------------------------------------------
+
+5. Pass parameters to the DEJAG routine via GPU RAM
+
+Parameters to DEJAG
+-------------------
+
+Include DEJAG.INC to load these equates:
+
+In_Adr       EQU ????      ; Pointer to start of the JagPeg (input)
+Out_Adr      EQU ????      ; Pointer to start of output area
+Dehuff_Adr   EQU ????      ; Pointer to start of DEHUFF.DAT
+                           ; (Be sure you have used LOCATE on DEHUFF.DAT)
+Out_Width    EQU ????      ; Width of the output space in blocks
+                           ; (A block is 8 pixels)
+Out_E_Width  EQU ????      ; Encloded pixel output width as defined in
+                           ; BLIT.INC (#WID320 for example)
+
+; Then set the DEJAG parameters as in this example:
+;
+   move.l   #$70000,In_Adr         ; JagPeg data starts at $70000
+   move.l   #$20000,Out_Adr        ; Write output starting at $20000
+   move.l   #$60000,Dehuff_Adr     ; DEHUFF.DAT starts at $60000
+   move.l   #40,Out_Width          ; Output screen is 40 blocks wide
+   move.l   #WID320,Out_E_Width    ; Output screen is 320 pixels wide
+
+Note: A block is 8 pixels wide.
+
+DEJAG will create output within a memory map that is considered to be Out_Width 
+blocks wide. This example is for a picture being uncompressed to the screen, 
+which is 320 pixels wide.  The width and height of the output itself is the 
+size of the picture.
+
+--------------------------------------------------------------------------
+
+6. Set the GPU instruction pointer to the top of GPU ram, start the GPU
+
+--------------------------------------------------------------------------
+
+7. If you need to wait for the GPU to finish its decompression, you can watch 
+the memory address All_Done, a variable located in GPU RAM. DEJAG moves 
+$12345678 into it when it's finished.
+
+--------------------------------------------------------------------------
+
+To run DEJAG a second (and subsequent) times, 
+
+A. Wait until it's finished with the current picture (step 7)
+B. Set In_Adr and Out_Adr again (as in step 5)
+C. Repeat step 3 if a new DQ??.DAT is needed
+D. Restart the GPU (step 7)
+E. All_Done gets loaded with 1 when DEJAG starts- look for the 1 first
+   before you start looking for $12345678 (or clear All_Done yourself)
+
+
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+Version 1.6 Release Notes
+-------------------------
+In earlier versions, the DEHUFF.DAT file was named DEHUFF.ABS and the DQ??.DAT 
+files were named DQ??.ABS.  This has been changed so these files use an 
+extension of .DAT, in order to avoid confusion with the .ABS files created by 
+the ALN linker.  Only the filenames have been changed, they are otherwise the 
+same.
+
+The earlier release of the PC verison of LOCATE utilty did not function 
+correctly.  This has been fixed.
+

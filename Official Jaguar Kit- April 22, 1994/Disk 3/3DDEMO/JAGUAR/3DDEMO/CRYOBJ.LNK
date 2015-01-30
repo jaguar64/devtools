@@ -1,0 +1,5 @@
+startup.o crymain.o video.o objects.o jagcry.o joypad.o
+objlist.o gpu.o head.o eyecry.o mouth.o
+turtle.o sort.o txtcry.o
+
+

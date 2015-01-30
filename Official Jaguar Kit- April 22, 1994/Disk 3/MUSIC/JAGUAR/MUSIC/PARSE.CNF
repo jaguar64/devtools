@@ -1,0 +1,9 @@
+*
+* parse.cnf
+* n = number_of_channels_(max_is_32)
+* channel: pitchrange_a - pitchrange_b patch pitch_offset
+* n = 8
+*0: 48 - 52 17 10
+*0: 53 - 53 18 -10
+*1: 48 - 62 18 10
+

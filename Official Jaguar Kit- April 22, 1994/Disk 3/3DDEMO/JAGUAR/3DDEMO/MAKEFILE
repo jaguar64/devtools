@@ -1,0 +1,58 @@
+#====================================================================
+# Makefile	ZBUFFER Program builds
+#====================================================================
+
+INC = e:/jaguar/inc
+
+#====================================================================
+#	Macro & Assembler flags
+#====================================================================
+
+MACFLAGS   = 
+GFLAGS     = -I$(INC) -c -CGPU -R1 -o
+;STADDR     = 190000
+STADDR     = 802000
+DADDR      = DF00
+ALNFLAGS   = -l -a $(STADDR) x 5000
+MAPFLAGS   = -v -m -l -a $(STADDR) x x
+
+#====================================================================
+#	Default Rules
+#====================================================================
+
+.SUFFIXES:	.o .s
+
+.s.o:
+	mac $(MACFLAGS) $*
+
+.SUFFIXES:	.o .gas
+
+.gas.o:
+	gasm $(GFLAGS) $*
+	ltxconv -l$* $*
+	erase $*.ltx
+#	bin2dat $*
+
+#====================================================================
+#	Object code modules
+#====================================================================
+
+CRYOBJS   = startup.o crymain.o video.o objects.o jagcry.o joypad.o \
+		objlist.o gpu.o head.o eyecry.o mouth.o \
+		turtle.o sort.o txtcry.o
+
+CRYZOBJ   = startup.o crzmain.o video.o objectsz.o jagcry.o joypad.o \
+		objlist.o gpu.o head.o eyecry.o mouth.o \
+		turtle.o sort.o txtcrz.o
+
+#====================================================================
+#	TARGETS
+#====================================================================
+
+all: crydemo.abs crz.abs
+
+crydemo.abs:	$(CRYOBJS)
+	aln $(ALNFLAGS) -o crydemo -c cryobj.lnk
+
+crz.abs:	$(CRYZOBJ)
+	aln $(ALNFLAGS) -o crz -c crzobj.lnk

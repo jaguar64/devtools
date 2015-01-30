@@ -1,0 +1,30 @@
+Files in the TGAJAG directory:
+
+TGAJAG.TXT     Documentation for TGAJAG
+TGAJAG.BAT     TGAJAG batch file, uses no subsampling
+TGAJAGH.BAT    TGAJAG batch file, uses HALF subsampling
+TGAJAGL.BAT    TGAJAG batch file, uses QUAD subsampling
+
+The following programs are called by TGAJAG.BAT (not by you directly):
+
+   SPLIT?      Creates three components of the TGA
+   QUAD        Performs special processing for QUAD subsampling
+   CJPEG       Does JPEG compression on each component
+   JSTRIP      Strips JFIF info from each compnent
+   MAKEQ       Creates the DQ??.ABS file
+   MERGE?      Merges the processed components into the final .JAG file
+
+
+Files in the DEJAG directory:
+
+DEJAG.TXT      Documentation for DEJAG
+DEJAG16.BIN    DEJAG Routine that outputs 16-bit RGB
+DEJAG24.BIN    DEJAG Routine that outputs 24-bit RGB
+               (to 32-bit per pixel screen memory)
+DEHUFF.DAT     Data table used by DEJAG routine
+LOCATE.EXE     LOCATE utility to modify DEHUFF.DAT (see DEJAG.TXT)
+DEJAG.INC      MadMac include file with equates for DEJAG routine
+
+
+The TESTJPG directory contains a variety of source code and data files.
+See the README.TXT file and MAKEFILE for more information.

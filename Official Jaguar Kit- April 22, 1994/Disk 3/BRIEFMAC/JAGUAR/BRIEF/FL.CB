@@ -1,0 +1,151 @@
+/*  FL.CB     BRIEF Editor - File List macros                               */
+/*                                                                          */
+/*  Written by Stan Steliga June 1989      Copyright (c) 1989  STELIGAWARE. */
+/*                                                                          */
+/*   Released to the "Public Domain" on October 30, 1989 by Stan Steliga.   */
+/*                                                                          */
+/*                                                                          */
+/*              BRIEF is a registered trademark of UnderWare, Inc.          */
+/*                                                                          */
+/*                                                                          */
+/*  This file consists of the two primary macros "make_list" and            */
+/*  "edit_this_one".  They are each assigned thier own "Hot-Key" by the     */
+/*  _init macro (which is automatically executed when this file is loaded). */
+/*                                                                          */
+/*   make_list     gets assigned to <Ctrl-M>                                */
+/*   edit_this_one gets assigned to <Ctrl-E>                                */
+/*                                                                          */
+/*  The purpose of these macros is to first execute make_list (Ctrl-M) to   */
+/*  get a list of files presented in a buffer, then pointing to one of the  */
+/*  files (by placing the cursor on the line the file is displayed on)      */
+/*  and then execute edit_this_one (Ctrl-E) to edit the file pointed to.    */
+/*                                                                          */
+/*  make_list will prompt the user for the file "mask" to use in retrieving */
+/*  files.  For example, to show all .BAT files in the root of the current  */
+/*  drive, you would use: \*.BAT                                            */
+/*                                                                          */
+/*  Each macro can be executed as many times as you like.  However, you     */
+/*  should know that each new file list is brought into a buffer called     */
+/*  FileList and associated with a file named FILELIST.nnn, where nnn is    */
+/*  a number that starts at 1 and is incremented by 1 with each new         */
+/*  execution of make_list.  Because these are new buffers, and are         */
+/*  considered to be modified, BRIEF will tell you that it hasn't been      */
+/*  saved when you exit BRIEF.  One way to deal with this is to use a DOS   */
+/*  Batch File to invoke BRIEF, and have a statement that erases any        */
+/*  filelist files that may have been saved. (i.e. ERASE FILELIST.*)        */
+/*                                                                          */
+/*                                                                          */
+/*  If you have any questions or comments about this macro package, please  */
+/*  feel free to call me at (617) 937-8044 after business hours (but not    */
+/*  too late please (kiddies you know))                                     */
+
+_init ()
+/* This macro will automatically get executed when this file is loaded.     */
+  {
+    int   flc;
+
+    string   last_pattern;
+
+    global   flc, last_pattern;
+
+    assign_to_key ("<Ctrl-E>", "edit_this_one");
+    assign_to_key ("<Ctrl-M>", "make_list");
+    flc = 0;
+    last_pattern = "";
+  }  /* end init macro */
+
+make_list ()
+  {
+    int   nb, wp, wpi, sw1, ctr;
+
+    string   nbfn, np, wfn, ws, wsi, ws2, ws3;
+
+    if (get_parm (0, np, "File Pattern (e.g. \\*.bat): ", 60, last_pattern))
+      {
+        message ("Please wait.  Working...");
+        if (np == "")
+           np = "*.*";
+        last_pattern = np;
+        ++flc;
+        sprintf (nbfn, "FILELIST.%d", flc);
+        nb = create_buffer ("FileList", nbfn);
+        set_buffer (nb);
+
+        wp = 0;
+        wpi = 0;
+        while (wpi < strlen (np))
+          {
+            ++wpi;
+
+            if (substr (np, wpi, 1) == "\\")
+              wp = wpi;
+          }
+
+        if (!wp)
+          ws = "";
+        else
+          ws = substr (np, 1, wp);
+
+        ws = upper(ws);
+
+        ctr = 0;
+        file_pattern (np);
+        while (find_file (wfn))
+          {
+            if ((wfn != ".") && (wfn != ".."))
+              {
+                ++ctr;
+                sprintf (wsi, "%s%s\n", ws, wfn);
+                sw1 = 0;
+                wp = 0;
+                while (!sw1)  
+                  { /* This loop puts the new file name in the correct (sorted) order */
+                    ++wp;
+                    goto_line (wp);
+                    ws2 = read ();
+                    if (ws2 == "\n")  /* if ws2 = chr(013) then make it null */
+                      ws2 = "";
+                    if (ws2 == "" || ws2 > wsi)
+                      sw1 = 1;
+                  }
+                insert (wsi);
+              }
+          }
+        goto_line (1);
+        insert ("  FileList                                   Copyright (c) 1989  STELIGAWARE\n\n");
+        sprintf (ws3, "Pattern: %s       (%d files)\n\n", np, ctr);
+        insert (ws3);
+        insert ("Place the cursor on any filename and press Ctrl-E to edit the file.\n\n");
+
+        attach_buffer (nb);
+
+        message ("");
+      } /* end if then */
+
+  }  /* end make_list macro */
+
+edit_this_one ()
+  {
+    string   wfn;
+	 int line, column;
+	string filename;
+
+    int   wp;
+
+    if (!inq_position (wp))
+      {
+			search_back("[ \t\n]\\c[0-9A-Za-z]");
+        wfn = read ();
+        wfn = substr (wfn, 1, strlen (wfn) - 1);
+			inq_position (line, column);
+			inq_names (filename);
+			_fl_insert_pos(line,column,filename);
+			edit_file (wfn);
+      }
+}  /* end edit_this_one macro */
+                                                                                                        
+
+
+
+                             snasm.cb 
+

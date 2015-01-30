@@ -1,0 +1,128 @@
+            CHARACTER MAPPED SCREEN USING OBJECTS
+            -------------------------------------
+
+    The purpose of this program is to show the ability of the Jaguar
+to build a character mapped screen using an object for each character
+on the screen. The created screen has the dimension of 40 rows and 25
+lines. So at least 1000 objects are going to be on the screen. Each
+character is a 8x8 bitmap object.
+
+    Because scanning through more than 1000 objects each scan line
+takes too much time, a binary tree is build by using branch objects.
+Each line contains 40 bitmap objects and one stop object. The lines
+are then connected by branch objects. That way we help the object
+processor to find the current line faster. It will have to go through
+a maximum of five (2^5 = 32; we have 25 lines) branch objects before
+it gets to the current line.  The condition in the branch object is
+set to "YPOS > VC" and the YPOS contains the y position of the line
+plus its height (8 * 2) minus one (YPOS = line_y + line_h - 1).
+
+
+            The Source Files
+            ----------------
+
+startup.s:
+    Ordinary Jaguar starup code.
+
+jaguar.s:
+    Code for initializing the Jaguar. This calls the user_objs()
+    function in `usertree.c' which will convert the in C structures
+    defined objects into object processor objects.  
+
+video.s:  
+    Vertical sync. interrupt handler and some initialization code.
+    The vblank routine switches between two object lists (wrkaJlist &
+    wrkbJlist), because it takes too long to update a list with more
+    than 1000 objects. So one is displayed while the other one is
+    being updated.  
+
+bldchr.c:  
+    Converts a monochrome chracter to 16 bit true color.
+
+vmemcpy.s:
+    A memory copy function.  
+
+alloc.c:  
+    A memory allocator including PHalloc for phrase alligned mallocs.
+    (PHalloc is actually defined in JAGOBJ.C)
+
+end.s:  
+    This defines the end of bss and is used by the memory allocator.  
+
+font8x8.c:  
+    The Atari system font data.  
+
+main.c:  
+    Just sits in a loop, updating the object list which is currently
+    NOT displayed. It does that copying it from a backup (orgaJlist &
+    orgbJlist) list.  
+
+usertree.c:  
+    This usually contains Jaguar objects defined in C structures. The
+    function user_objs() is called from InitJag in `jaguar.s'.
+    User_objs() returns a pointer to the first C object.  InitJag then
+    calls cnvt_objlst() to convert the C objects to object processor
+    objects.
+
+    For the tree it's a little more complicated. Since we need a
+    balanced binary tree, the tree is built at runtime. See below for
+    details.
+
+jagobj.c:
+    This file contains the functions which convert C structures to
+    object processor objects. See below for details.
+
+
+            USERTREE.C & JAGOBJ.C
+            ---------------------
+
+    As already mentioned, user_objs() gets called from InitJag. It
+generates a balanced binary tree. First it creates the first line.
+Each line exists of 40 bitmap objects and one stop object. Note that
+these are C structures, not packed object processor objects. The C
+structures are defined in `jagobj.h'. After building the first line,
+bt() [build tree] is called to create the root of the binary tree.
+Then the other 24 lines are built and inserted into the tree.  Right
+[wrt()] and left [wlft()] rotations are done to keep the tree
+balanced. User_objs() returns the root of the tree.
+
+    InitJag then calls cnvt_objlst() to convert the C structures to
+object processor objects. Cnvt_objlst() uses obj_nbytes() to find out
+how much memory is needed for the object processor objects. The tricky
+part is that it has to add the memory needed for gaps between some
+objects.  For example a branch object just needs one phrase. But if
+it's followed by a scaled bitmapped object, a gap of 24 bytes has to
+be inserted because a scaled bitmapped object has to be on a 32 byte
+boundary:
+            [ bitmap  ] ---+ 
+            [ object  ]    |
+                           |
+            [ gap     ]    |
+            [ gap     ]    |
+            [ gap     ]    |
+                           |
+       +--- [ branch  ] <--+
+       |
+       |    [ scaled  ]
+       |    [ bitmap  ] ---+
+       |    [ object  ]    |
+       |                   |
+       V                   V
+
+    Next, memory is allocated for the list as well as for a backup of
+the list.  The backup is needed for restoring the list (the object
+proccesor munches it). The list is then converted by calling
+_cnvt_objlst. This function goes recursivly through the list and
+converts each object by calling build_obj(). It inserts the needed
+gaps whereever necessary, so that all objects are properly alligned.
+
+    The whole thing is done twice, because we need two object lists.
+One which can be restored while the other one is being displayed.
+Restoring is simply done by copying the backup list to the list. Of
+course, the pointers to the next object in the backup list are
+already setup to work in the real list.
+
+That's all.  There is also a second demo, USERPIC, which uses most of
+the same source files, but which sets up a much more simple object
+list, and displays a couple of pictures rather than text characters.
+

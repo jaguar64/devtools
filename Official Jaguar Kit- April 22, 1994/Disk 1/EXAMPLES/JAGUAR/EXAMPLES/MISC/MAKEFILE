@@ -1,0 +1,52 @@
+#====================================================================
+# Makefile	EXAMPLES
+#====================================================================
+
+#====================================================================
+#	Macro & Assembler flags
+#====================================================================
+
+STADDR = 802000
+ALNFLAGS = -l -a $(STADDR) x 4000
+
+#====================================================================
+#	Default Rules
+#====================================================================
+.SUFFIXES:	.o .s
+
+.s.o:
+	mac $*
+
+.SUFFIXES:	.ot .gas
+
+.gas.ot:
+	mac -dmac=1 -o$*.ot $*.gas
+
+
+.SUFFIXES:	.oj .das
+
+.das.oj:
+	mac -dmac=1 -o$*.oj $*.das
+
+#====================================================================
+#	EXECUTABLES
+#====================================================================
+
+COMMON = intserv.o vidinit.o listbar.o clearbar.o
+
+all: jagshad.abs jagshad.abs jagskew.abs jagblck.abs jagslnt.abs jagline.abs
+
+jagshad.abs: jagline.o $(COMMON) blitshad.o
+	aln $(ALNFLAGS) -o jagshad jagline.o $(COMMON) blitshad.o
+
+jagskew.abs: jagline.o $(COMMON) blitskew.o
+	aln $(ALNFLAGS) -o jagskew jagline.o $(COMMON) blitskew.o
+
+jagblck.abs: jagline.o $(COMMON) blitblck.o
+	aln $(ALNFLAGS) -o jagblck jagline.o $(COMMON) blitblck.o
+
+jagslnt.abs: jagline.o $(COMMON) blitslnt.o
+	aln $(ALNFLAGS) -o jagslnt jagline.o $(COMMON) blitslnt.o
+
+jagline.abs: jagline.o $(COMMON) blitline.o
+	aln $(ALNFLAGS) -o jagline jagline.o $(COMMON) blitline.o

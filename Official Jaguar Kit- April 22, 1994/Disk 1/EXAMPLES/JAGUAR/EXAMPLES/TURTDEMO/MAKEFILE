@@ -1,0 +1,69 @@
+#====================================================================
+# Makefile:     TURTDEMO
+#
+# CHANGES:
+# 93-Nov-20 nbk: general restructuring in this file, comments
+#====================================================================
+
+#====================================================================
+#       Macro & Assembler flags
+#====================================================================
+
+MACFLAGS   =
+STADDR     = 4000
+DADDR      = DF00
+ALNFLAGS = -l -a $(STADDR) $(DADDR) x 
+
+#====================================================================
+#       Default Rules
+#====================================================================
+
+.SUFFIXES:      .o .s
+.s.o:
+	mac $(MACFLAGS) $*.s
+
+.SUFFIXES:      .o .gas
+.gas.o:
+	mac $(MACFLAGS) $*.gas
+
+#====================================================================
+#       Object code modules
+#====================================================================
+# if we want to change modules, we can easily change it here and it
+# will be correctly replaced in all possibly existing multiple targets
+
+OBJS    = main.o vidobj.o vidinit.o joypad.o gpu.o models.o \
+	fastdraw.o turtle.o sort.o
+
+#====================================================================
+#       EXECUTABLES
+#====================================================================
+
+turtdemo.abs: $(OBJS)
+	aln $(ALNFLAGS) -o turtdemo.abs $(OBJS)
+
+#====================================================================
+#       Dependencies in 68000 code
+#====================================================================
+# means: if any of these files is touched, reassemble the module
+ 
+#main.o:         main.s $(INC)/jaguar.inc $(INC)/blit.inc $(INC)/joypad.inc
+#vidobj.o:       vidobj.s $(INC)/jaguar.inc
+#vidinit.o:      vidinit.s $(INC)/jaguar.inc
+#joypad.o:       joypad.s $(INC)/jaguar.inc $(INC)/joypad.inc
+#gpu.o:          gpu.s $(INC)/jaguar.inc $(INC)/blit.inc $(INC)/gpu.inc
+#models.o:       models.s
+
+#
+#====================================================================
+#       Dependencies in GPU code 
+#====================================================================
+# means: if any of these files is touched, reassemble the module
+# macros.inc are specifically written for this project, so they should
+# not be mixed with the more general include files from the $(INC) 
+# directory. we just keep it where the source is. 
+
+#fastdraw.o:     fastdraw.gas macros.inc $(INC)/jaguar.inc $(INC)/blit.inc $(INC)/gpu.inc
+#turtle.o:       turtle.gas macros.inc $(INC)/jaguar.inc $(INC)/blit.inc $(INC)/gpu.inc
+#sort.o:         sort.gas macros.inc $(INC)/jaguar.inc $(INC)/blit.inc $(INC)/gpu.inc
+

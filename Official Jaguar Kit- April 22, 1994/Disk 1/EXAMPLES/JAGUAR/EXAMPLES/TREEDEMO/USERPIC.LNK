@@ -1,0 +1,4 @@
+startup.o jaguar.o video.o jagobj.o main.o
+large.o vmemcpy.o bldchr.o font8x8.o bird1.o
+lotus.o userpic.o alloc.o end.o
+

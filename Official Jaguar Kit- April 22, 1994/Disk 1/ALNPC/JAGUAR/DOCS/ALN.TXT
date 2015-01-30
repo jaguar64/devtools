@@ -1,0 +1,113 @@
+Adds for ALN - AL Brainstorm 1993-94.
+(TABSIZE=4)
+Main course: management of BSD and COFF encapsulated BSD file formats.
+	Source level handled with DBX stabs.
+
+5-may-1994
+	? Moved gpu/dsp eqr test from ((add>=GPUEQR) && (add<=GPUEQR|31))
+	  to (add&0xffffff80)==GPUEQR. (GPUEQR=0x80000080). Even if I don't
+	  understand why.
+	  Wish from Robert Dibley, Rebellion Software.
+28-apr-1994
+	+ Added a new display in case of unresolved symbols. If the '-u' option
+	  is activated, the relocation locations are printed during the process,
+	  together with source level informations if they are present. So,
+	  aln -u .... gives something like:
+	  Unresolved symbol: <mysymbol> ( in BSD object ) at offset 0X120.
+	  Near /mywork/work/work.s:57.
+18-apr-1994
+	- Bug in this sh... BSD format in alignement. I "forgot" that BSD addresses
+	  where TEXT absolute (not section relative!). So, data and bss relocations
+	  and symbols were improperly aligned. MANY THANKS to ROBERT DIBLEY from 
+	  REBELLION SOFTWARE! BTW, default phrase alignement is requested by Atari...
+	- Bug in '-r's parameters recognition (was taking the following one)
+	  (Robert, again).
+	+ Added a warning when relocating with a GPU/DSP regequ value (Wish from ...
+	  guess who?).
+26-mar-1994
+	+ Added '-r' option (as in MADMAC) which sets section alignment.
+	  See addendum.aln for syntax. Unlike MADMAC, the default alignment
+	  is PHRASE (8 bytes) for backward compatibility (the previous versions
+	  of ALN for Jaguar were forcing BSS section size and included file sizes
+	  to PHRASE alignment). Therefore, no more "Error: odd-sized TEXT or DATA
+	  section; link aborted." and "Warning: DATA section size of xxx.o is
+	  not phrase-aligned.".
+21-mar-1994
+	+ Added N_ASLINE stab (0x4c) which is a absolute source line. This is
+	  an extension to standard DBX stabs.
+10-mar-1994
+	- Removed a bug in DRI symbol table check.
+	! There seem to be problems under MS/DOS if you don't use the -B option.
+26-feb-1994
+	- Added '-ii' command line option, same as '-i' but doesn't truncate
+	symbols to 8 cars.
+19-feb-1994
+	- Fixed a comparison bug in word fixups in BSD format on Atari
+	(thanks to Rebellion Software's bug report - Hi Robert ;=)).
+	- Moved long to unsigned long comparison for symbol name offset
+	in BSD format (should only happen with crashed object files, thanks
+	(again) to Robert).
+ 	- Fixed a print crash when not enough memory is available for the
+	output COFF file.
+1-feb-1994
+	- Fixed common BSD labels bug (Thanks again to Loriciel's bug report).
+31-jan-1994
+	+ Common BSD labels are now handled (Thanks to Loriciel's bug report).
+	- DRI output from BSD input is now ok (same as above ^^).
+19-jan-1994
+	- Bug in name offset for stabs removed.
+	(RDB loads ok, get sources list with 'mlist' command.)
+17-jan-1994
+	+ Source level handling done. Have to test. Use '-g' option to get it.
+	  Must be used with '-e' option. Not tested without '-a' option.
+	  So you should have in your makefiles something like:
+		For MAC:	-g -fb <source name>
+		For ALN:	-g -l -e -a <text @> <data @> x -o <output name>
+	  if you want source level.
+	  (RDB doesn't load it yet anyway).
+	! Careful: symbols generated with '-e' are now BSD! Please use
+	  the next RDB version if you want to use it, even without source
+	  level.
+16-jan-1994
+	- No more "unknown BSD symbol type" message (it should be stab!).
+	? I don't understand how ld performs its xref pc relocation. I couldn't
+	  make it work, and MAC and ALN work ok with my code. So it must be
+	  a bug in ld's code or something... I don't think gcc generates
+	  pc relative external references anyway so it could be kept hidden
+	  until now.
+	  Anyway, people should ALWAYS use ALN instead of ld.
+14-jan-1994
+	+ Output of COFF seems ok. The file extension is .abs, so you can use
+		'aread <fname>'. But the file is not DRI at all ...
+		RDB loads it now. So now you should have in your makefiles:
+		For MAC:	-fb <source name>
+		For ALN:	-l -e -a <text @> <data @> x -o <output name>
+		With this you can have symbols of any length in link time,
+		and with 23 cars max in RDB (RDB restriction only).
+		For the moment, symbols are DRI (changed on 17-jan-1994 to BSD).
+13-jan-1994
+	+ Output COFF files (no source level yet). Use '-e' switch.
+		(RDB doesn't load it yet anyway: done on 14-jan-1994).
+11-jan-1994
+	- Cleaned BSD object input. Now seems ok. Works with turtdemo.
+6-jan-1994
+	- Removed a bug in the dot check in output name
+		(was misinterpreting something like ..\myprog)
+5-jan-1994
+	- Removed a bug that would not make a BSS absolute in a .abs file.
+		It was caused by an extern int reference to a short value.
+		(Don't know when it came).
+	- When an empty line was typed in, its contents wasn't cleared.
+		(This one seems to be there from the beginning).
+4-jan-1994
+	+ Added skipping multiply-defined locals (use -b to avoid it).
+		This was made necessary because of the add of 'aread <absfile>' in RDB.
+		One day I will make it more clever (yes it uses more memory :=)).
+	+ Now takes BSD object files (Big endian only (Motorola), of course!).
+31-dec-1993
+	+ Added string table management.
+	+ Symbols are now COFF-like, can read BSD objects.
+	+ Relocation is function ptr'ed.
+25-dec-1993
+	+ Added bsdobj.c
+

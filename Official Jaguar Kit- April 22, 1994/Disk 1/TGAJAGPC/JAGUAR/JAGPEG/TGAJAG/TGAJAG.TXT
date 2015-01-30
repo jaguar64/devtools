@@ -1,0 +1,153 @@
+
+-------------------------------------
+ JagPeg Conversion Tools version 1.5
+ PC Version Release 1.1
+-------------------------------------
+
+Copyright 1993 Atari Corp. All Rights Reserved.
+Author: Mike Pooler, Atari Corp.
+Update: Mike Fulton, Atari Corp.
+Release Date: 2/18/94
+
+CONFIDENTIAL.
+
+This describes how to use TGAJAG, a group of utility programs that convert a 
+Targa file (.TGA) to a JagPeg file (.JAG).
+
+Background: JagPeg is our version of JPEG. A JagPeg file has a .JAG extension, 
+and it contains one compressed 24-bit true color bitmap. It is uncompressed by 
+a program called DEJAG, which runs in the Jaguar's GPU.  DEJAG is described 
+seperatly (see DEJAG.DOC).
+
+TGAJAG takes the filename of a Targa file as its first argument. The Targa file 
+must be:
+
+- Uncompressed (Image type 2)
+
+- 24-bits per pixel
+
+- A mutiple of 8 pixels in width
+  (If HALF or QUAD subsampling, a multiple of 16 pixels in width)
+  (Subsampling is explained below)
+
+- A mutiple of 8 pixels in height
+  (If QUAD subsampling, a multiple of 16 pixels in height)
+
+Some Targa files which meet the above requirements are stored from bottom-up, 
+(with the first screen-line at the end of the file), others from top-down.  
+Both types are supported by TGAJAG.
+
+TGAJAG writes two files as output.  The first is a JagPeg file  (.JAG), which 
+has this format:
+
+[Word 0]  JagPeg version number (currently 1)
+[Word 1]  Picture format code
+            1: YCrCb with no subsampling
+            2: YCrCb with HALF subsampling
+            3: YCrCb with QUAD subsampling
+[Word 2]  Width in 8-pixel blocks (e.g. 40 == 320 pixels)
+[Word 3]  Height in 8-pixel blocks
+[Data...]
+
+The second output file from TGAJAG is a file containing a dequantization table 
+for the requested compression quality, which is required by the JPEG decoding 
+routines.  This file will named 'DQ??.DAT' (where the ?? is the quality 
+percentage).
+
+
+Using TGAJAG
+------------
+
+TGAJAG.G is a batch file that runs under the GULAM commandline shell on TOS 
+machines.  TGAJAG.BAT is the equivalent for the MSDOS commandline on PCs.  Both 
+are used the same way.  To use TGAJAG, type:
+
+TGAJAG[H|Q] (file) (quality)
+
+TGAJAG[H|Q]  means you can type one of: TGAJAG, TGAJAGH, TGAJAGQ
+             (There are actually three different versions of the
+              TGAJAG batch file.  The differences are described
+              below.)
+
+(file)       is the first name of the .TGA Targa picture file
+             (Don't include ".TGA" in the filename you give it, but
+              otherwise you can give it a complete pathname for the
+              file.  The resulting .JAG file will be placed into
+              the same directory as the .TGA file, but the DQ??.DAT
+              file will be placed into the current directory.
+              Under MSDOS, you can have your PATH variable include
+              the directory of the TGAJAG tools.)
+
+(quality)    sets the quality of the JagPeg picture that is
+             produced.
+
+
+Examples:
+
+tgajag cat 60   (convert cat.tga to cat.jag with quality of 60)
+tgajagh ship 75 (convert ship.tga to ship.jag, HALF subsampling, quality 75)
+
+
+For most purposes, a quality between 60 and 80 will provide the best balance 
+between compression ratio and quality.  High quality settings give less lossy 
+compression, thus larger .JAG file sizes. Lower numbers get you better 
+compression and smaller files, but if the number is too low you will get a 
+visable degredation in visual quality (this will appear as fuzzyness and/or 
+blockiness). The goal is to find a number that gives you acceptable compression 
+and a picture that is is nearly indistinguishable from the original .TGA, 
+visually. This "ideal" setting is different for different pictures, so it's a 
+matter of trial and error.
+
+The default setting is 75, which is usually a good starting point. If you go 
+much above 75 you lose more and more compression without a significant gain in 
+quality.
+
+Each quality setting produces a unique "dequantize" table, which is used during 
+the decompression (see DEJAG.DOC).
+
+SUBSAMPLING
+-----------
+You also have the option of using HALF subsampling or QUAD subsampling.  To get 
+HALF subsampling, use TGAJAGH.  To get QUAD subsampling, use TGAJAGQ.
+
+HALF subsampling means that the picture's color components are cut to half 
+their horizontal size before processing by CJPEG. (The luminance component is 
+left as is). While this is quite lossy, it produces little visable change in 
+the final output, while getting a good reduction in size. We recommend that you 
+use TGAJAGH as default.
+
+QUAD subsampling means that the picture's color components are cut to one 
+quarter its size (half vertical, half horizontal) before processing by CJPEG. 
+Size reductions over HALF are less dramatic, visual differences are more 
+dramatic. It may be worth a try, but we recommend HALF as your best option.
+
+Remember if you use HALF or QUAD, picture width must be a multiple of 16 
+pixels. If you use QUAD, picture height must be a mulitple of 16 pixels.
+
+Decompression speed is DIRECTLY related to .JAG size. A .JAG file that is 30% 
+smaller than another will usually decompress in about 30% less time.
+
+Notes:
+
+Free disk space requirements for TGAJAG are such that you should have at least 
+double the size of your TGA file, to be safe, before running TGAJAG (e.g. for a 
+200K TGA file have 400K free). Note that the utilities do not all detect disk-
+full conditions, and they will probably do a whole lot of nothing once disk 
+space runs out (even if they look like they're working).
+
+If the final JAG file is larger than you expect, try using TGAJAGH instead of 
+TGAJAG, and/or calling it with a lower quality setting.
+
+There is little error checking- if you feed it an illegal Targa picture (see 
+above), or a bad filename it may do ungraceful things.
+
+
+
+v1.1 Release Notes:
+-------------------
+Earlier versions of the PC version of the MAKEQ tool (one of the utilities 
+called by TGAJAG) did not work correctly, but this has now been fixed.
+
+Earlier versions of the TGAJAG tools used an .ABS extension for the DQ??.ABS 
+files they created.  This has been changed to create a DQ??.DAT file instead, 
+to avoid confusion with the .ABS files created by the ALN linker.

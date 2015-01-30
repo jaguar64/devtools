@@ -1,0 +1,91 @@
+Please read these instructions carefully before trying to install the Jaguar
+developer tools & sample code.  About 9 mb free disk space is required for
+installation.
+
+-----------------------------------------------------------------------------
+
+NOTE: You must perform the installation from the MSDOS command prompt.  If
+      you are running MS-Windows, exit to DOS or run the MSDOS command prompt
+      in order to perform the installation.
+
+-----------------------------------------------------------------------------
+
+1) Change to the drive and directory where you want to install the files.
+   The installation will automatically create a directory named JAGUAR and
+   install everything into it. (e.g. if you are at D:\ then you'll end up
+   with D:\JAGUAR and it will contain everything.  Therefore, you do not
+   need to create a directory yourself.)
+
+
+2) Insert disk #1 into your floppy drive.  To install from drive A: enter
+   the command "A:install A:" DO NOT use a backslash following the drive
+   letter and colon. To install from drive B: enter the command "B:install B:"
+
+   NOTE: The drive letter and colon specifies the SOURCE, not the destination.
+         The destination is implied by the current drive and directory when
+         you run the installation.
+
+
+3) The installation process will take several minutes to complete, and you
+   will be prompted to change disks when needed.  Simply follow the onscreen
+   instructions.
+
+
+4) After all of the files have been installed, you will need to set up a
+   few environment variables for the tools to work correctly.  Refer to
+   the documentation for the tools for more information.  The environment
+   variables you need are:  (Change these paths as appropriate for where
+   you've installed everything.)
+
+       RDBRC=E:\JAGUAR\BIN\RDB.RC
+       DBPATH=E:\JAGUAR\BIN
+       ALNPATH=E:\JAGUAR\BIN
+       MACPATH=E:\JAGUAR\INC
+
+   You also need to add the following to your existing PATH.
+
+       E:\JAGUAR\BIN;E:\JAGUAR\GNU\BIN
+
+   Finally, the GNU GCC C/C++ compiler will not work properly if your
+   TEMP environment variable ends in a backslash.  Therefore, you may
+   need to change it to just a drive letter and colon:
+
+       TEMP=C:
+
+-----------------------------------------------------------------------------
+
+If you experience any problems with installation, please contact your
+developer support representative.  If you have problems with one of the
+floppy disks, you may wish to check on the Jaguar Developer BBS system
+to see if you can download the files required to recreate the bad disk.
+
+For Developer Support, call (408) 745-2000 and follow the phone system
+menu choices.
+
+The number for the Jaguar Developer BBS is (408) 745-2157.  The first 
+time you call, you will not have access to files, so you should contact
+developer support to facilitate getting clearance.
+
+-----------------------------------------------------------------------------
+
+GETTING STARTED
+---------------
+
+After installation, the first thing you need to do is set up your environment
+variables as shown above.  For those using MSDOS, this means adding the
+following lines to your AUTOEXEC.BAT file:
+
+       set RDBRC=E:\JAGUAR\BIN\RDB.RC
+       set DBPATH=E:\JAGUAR\BIN
+       set ALNPATH=E:\JAGUAR\BIN
+       set MACPATH=E:\JAGUAR\INC
+       set PATH=%PATH%;E:\JAGUAR\BIN;E:\JAGUAR\GNU\BIN
+
+Change "E:\" to the drive and directory where the JAGUAR directory is located.
+If you are using the GULAM shell on the Atari, these environment variables
+are set by the standard GULAM.G startup script file that is supplied with
+the shell.
+
+Having these environment variables set correctly is critical if you want the
+tools and examples to work properly.
+

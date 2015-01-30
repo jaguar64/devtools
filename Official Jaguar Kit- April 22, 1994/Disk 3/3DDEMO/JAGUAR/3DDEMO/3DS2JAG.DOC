@@ -1,0 +1,363 @@
+
+	3DS2JAG	v2.2	Oct 29 1993	14:11:32 Andrew J Burgess
+
+Useage:	3DS2JAG [options] filename
+
+	filename:
+		a 3D-Studio file to be converted
+
+	output:
+		a Jaguar .JAG file containing 68000 assembly
+		data allocation statements that represent a
+		Jaguar polygon object
+
+	options:
+		-f              specifies that FLAT shading be applied to the
+		                model
+		                default: GOURAUD shading
+
+		-l label        specifies the label for the object the label
+		                is an identifier string. An optional number
+		                tag can be added using the "-n" option below
+		                default: <label>
+
+		-n num          starting number for use with the label option
+		                the resultant label will be of the form:
+		                          <label><num>
+		                where <num> is a three digit value that is inc-
+		                remented every time another object is encountered
+
+		-o filename     specifies the output filename. This option will
+		                create a .JAG file with the prefix "filename".
+		                default: input filename prefix
+
+		-p              phrase, use the .phrase directive
+		                default: .even
+
+		-r              suppress removal faces with normals of zero (0)
+		                default: do not suppress
+
+		-s              size, suppress the size of the model as the first
+		                element of the model.
+		                default: size included
+
+		-t              triangles, bypasses the polygon reforming sequence
+		                leaving the polyhedron made up of triangles.
+				DISABLED
+
+		-v              verbose, output additional information during
+		                processing. (debugging)
+
+
+The 3DS2JAG program converts 3D Studio .3DS files into Atari Jaguar .JAG files.
+This process involves 2 stages:
+	1) Input and parsing of the .3DS files
+	2) Construction and outputing of a .JAG file
+
+SOURCE CODE
+
+help.doc	This document
+makefile	make file descriptor
+defs.h		default program definitions
+3ds.h		3D Studio data structures and defines
+jag.h		.3DS and .JAG data structures defines
+3ds2jag.c	Initialization and help routines
+3ds.c		.3DS file parser and input processor
+color.c		Color table routines
+model.c		.JAG structure builder and output processor
+reform.c	Converts groups of .3DS triangles into arbitrary
+			convex polyhedrons: DISABLED-needs rework
+rgb2cry.c	RGB to CRY convertion routines (Mike Pooler)
+crytable.c	CRY lookup tables (Mike Pooler)
+debug.c		Program debugging routines
+
+cube.3ds	cube example data (Binary)
+cube.jag	cube model data (Ascii)
+a.3ds		Block A example data (Binary)
+a.jag		Block A model data (Ascii)
+
+The following is a sample of the routines called and their relative order while
+processing a data file.  Indents show direct calls for the previous indent, for
+example:
+	 Process3DS calls
+		Open3DSFiles
+		Get3DsCommand
+		GetMData
+		MakeJagModel
+		Close3DSFiles
+
+
+In order to simplify the output no loops are repesented, and many of the repeat-
+ed commands have been removed.  This is only to give you a rough idea of the
+basic flow for an object like a cube:
+
+main()
+	Process3DS()
+	    Open3DSFiles()
+	    Get3DSCommand()
+	    GetMData()
+	        Get3DSCommand()
+	        GetMatEntry()
+	            Get3DSCommand()
+	            GetMatName()
+	            Get3DSCommand()
+	            Get3DSColor()
+	                Get3DSCommand()
+	            Insert3DSColor()
+	                AddColor()
+	            Get3DSCommand()
+	        Get3DSCommand()
+	        Get3DSFloat()
+	        Get3DSPoint()
+	        Get3DSCommand()
+	        Get3DSNamedObject()
+	            Get3DSCommand()
+	            GetTriObject()
+	                Get3DSCommand()
+	                GetPointArray()
+	                    Get3DSPoint()
+	                Get3DSCommand()
+	                GetFaceArray()
+	                    Get3DSShort()
+	                    Get3DSCommand()
+	                    GetMatGroup()
+	                        Get3DSShort()
+	                        ColorLookUp()
+	    MakeJagModel()
+	        BuildVertList()
+	        BuildFaceNormals()
+	        RemoveNormals()
+	        RemoveNormals()
+	        BuildVertNormals()
+	            NewFaceNormal()
+	        BuildSegList()
+	            InsertSegment()
+		DISABLED
+		        ReformPolyhedron()
+		            LinkFace()
+		            AssembleFace()
+		                AddVertex()
+		            CompletePolygons()
+		       	        CheckOrder()
+	        BuildFaceList()
+	            InsertFace()
+	        ReorderFaces()
+	        OutputModel()
+	    Close3DSFiles()
+COMPLETED
+
+
+INPUT AND PARSING OF THE .3DS FILES
+
+This process involves reading in a 3D Studio .3DS data file. For a full descrip-
+tion of the data format refer to the manual "3D Studio File ToolKit: reference,
+publication 100672-A, December 18,1992".  As newer versions of 3D Studio are
+created, 3DS2JAG will have to be modified to reflect any new commands.
+
+The structure of the .3DS binary data file can be found in Chapter 2, page 7, and the
+Data Structure Reference, page 35-47.  The data in this file is grouped into chunks,
+defined by a Command, Size, and Data block.  See Chapter 3, pages 49-79.
+
+The parser for this data is done by looking for a Command, determining whether
+or not that command is supported, get the size, then the chunk.  If the command
+is not supported, the entire chunk is skipped.  If it is supported, the chunk is
+then parsed for its sub-groups.
+
+
+CONSTRUCTION AND OUTPUTING OF A .JAG FILE
+
+Once the .3DS model has been completely parsed and assembled, the .JAG model
+must be assembled and output.  The .JAG model is based on the following, defined
+by Robert Zydbel:
+
+									
+   	     	+-------------------+					
+   	        |    Zmin |  #VERT  |		MODEL			
+   	        +-------------------+					
+   	        |    #SEG |  #FACE  |					
+   	        +-------------------+					
+   	     +--|    PTR to SEGS    |					
+   	     |  +-------------------+					
+   	     |  |    PTR to VERTS   |--+				
+   	     |  +-------------------+  |				
+   	     |  |   SCNT  |  COLOR  |  |				
+   	     |  +-------------------+  |				
+   	     |  |      SEG IDX      |  |	One Entry/Face		
+   	     |  +-------------------+  |		should be pack-	
+   	    ...          ...          ...	 	ed 16-bits	
+   	     |  +-------------------+  |				
+   	     |  |      SEG IDXn     |  |				
+   	     |  +-------------------+  |				
+   	    ...          ...          ...				
+   	     |  +-------------------+  |				
+   	     +->|   VIDX  |  VIDX   |  |	One Endpoint pair	
+   	        +-------------------+  |		per segment	
+   	                 ...          ...				
+   	        +-------------------+  |				
+   	        |   VIDX  |  VIDX   |  |				
+   	        +-------------------+  |				
+   	                 ...          ...				
+   	        +-------------------+  |				
+   	        |    X    |    Y    |<-+	Position/Vertex Normal	
+   	        +-------------------+					
+   	        |    Ix   |    Z    |					
+   	        +-------------------+					
+   	        |    Iz   |    Iy   |					
+   	        +-------------------+					
+   	                 ...         					
+   	        +-------------------+					
+   	        |    X    |    Y    |					
+   	        +-------------------+					
+   	        |    Ix   |    Z    |					
+   	        +-------------------+					
+   	        |    Iz   |    Iy   |					
+   	        +-------------------+					
+
+The following is a sample of output from 3DS2JAG for a cube created
+in 3D Studio:
+
+
+	.data
+	.phrase
+
+SEGOFFSET	EQU	$4
+
+
+;*======================================================================*
+
+	.globl	cube
+
+cube:
+	DC.L	$00000104		;* Size (260)
+	DC.W	$0000			;* Zmin
+	DC.W	8			;* number of Vertices
+	DC.W	18			;* number of Segments
+	DC.W	6			;* number of Faces
+	DC.L	.seglist		;* pointer to segments
+	DC.L	.vertlist		;* pointer to vertices
+
+	;*===============================================================*
+	;*	FACE DATA - negative values signify reversing the segment vertext pair
+	;*===============================================================*
+
+.facelist:
+	DC.W	4			;* Face   0: Segments in Face
+	DC.W	$7F5B			;* color GREEN MATTE (GOURAUD)
+	DC.W	SEGOFFSET * -7
+	DC.W	SEGOFFSET * -10
+	DC.W	SEGOFFSET * -13
+	DC.W	SEGOFFSET * -16
+	DC.W	4			;* Face   1: Segments in Face
+	DC.W	$87A9			;* color GRAY MATTE (GOURAUD)
+	DC.W	SEGOFFSET * -2
+	DC.W	SEGOFFSET * 12
+	DC.W	SEGOFFSET * 10
+	DC.W	SEGOFFSET * -9
+	DC.W	4			;* Face   2: Segments in Face
+	DC.W	$F0D1			;* color RED MATTE (GOURAUD)
+	DC.W	SEGOFFSET * -5
+	DC.W	SEGOFFSET * -6
+	DC.W	SEGOFFSET * 16
+	DC.W	SEGOFFSET * -15
+	DC.W	4			;* Face   3: Segments in Face
+	DC.W	$CDFF			;* color YELLOW MATTE (GOURAUD)
+	DC.W	SEGOFFSET * -4
+	DC.W	SEGOFFSET * 15
+	DC.W	SEGOFFSET * 13
+	DC.W	SEGOFFSET * -12
+	DC.W	4			;* Face   4: Segments in Face
+	DC.W	$00BD			;* color BLUE MATTE (GOURAUD)
+	DC.W	SEGOFFSET * 5
+	DC.W	SEGOFFSET * 4
+	DC.W	SEGOFFSET * 2
+	DC.W	SEGOFFSET * 1
+	DC.W	4			;* Face   5: Segments in Face
+	DC.W	$F8FF			;* color ORANGE MATTE (GOURAUD)
+	DC.W	SEGOFFSET * -1
+	DC.W	SEGOFFSET * 9
+	DC.W	SEGOFFSET * 7
+	DC.W	SEGOFFSET * 6
+
+	;*===============================================================*
+	;*	SEGMENT DATA
+	;*===============================================================*
+
+.seglist:
+	DC.L	$FFFFFFFF		;* MUST BE -1 ENTRY - cannot be used
+	DC.L	$00080000		;* Seg    1: (  1,  0)
+	DC.L	$00100008		;* Seg    2: (  2,  1)
+	DC.L	$00000010		;* Seg    3: (  0,  2)
+	DC.L	$00180010		;* Seg    4: (  3,  2)
+	DC.L	$00000018		;* Seg    5: (  0,  3)
+	DC.L	$00200000		;* Seg    6: (  4,  0)
+	DC.L	$00280020		;* Seg    7: (  5,  4)
+	DC.L	$00000028		;* Seg    8: (  0,  5)
+	DC.L	$00080028		;* Seg    9: (  1,  5)
+	DC.L	$00300028		;* Seg   10: (  6,  5)
+	DC.L	$00080030		;* Seg   11: (  1,  6)
+	DC.L	$00100030		;* Seg   12: (  2,  6)
+	DC.L	$00380030		;* Seg   13: (  7,  6)
+	DC.L	$00100038		;* Seg   14: (  2,  7)
+	DC.L	$00180038		;* Seg   15: (  3,  7)
+	DC.L	$00200038		;* Seg   16: (  4,  7)
+	DC.L	$00180020		;* Seg   17: (  3,  4)
+	DC.L	$00200030		;* Seg   18: (  4,  6)
+
+	;*===============================================================*
+	;*	VERTEX DATA
+	;*===============================================================*
+
+.vertlist:
+		;* vertex:	0
+	DC.L	$FFCF0031		;* X |Y  (16.0,16.0)	(-49,49)
+	DC.L	$FFCFDB0D		;* Z |Nx (16.0,0.16)	(-49)
+	DC.L	$24F3DB0D		;* Ny|Nz (0.16,0.16)
+
+		;* vertex:	1
+	DC.L	$00310031		;* X |Y  (16.0,16.0)	(49,49)
+	DC.L	$FFCF24F3		;* Z |Nx (16.0,0.16)	(-49)
+	DC.L	$24F3DB0D		;* Ny|Nz (0.16,0.16)
+
+		;* vertex:	2
+	DC.L	$0031FFCE		;* X |Y  (16.0,16.0)	(49,-50)
+	DC.L	$FFCF24F3		;* Z |Nx (16.0,0.16)	(-49)
+	DC.L	$DB0DDB0D		;* Ny|Nz (0.16,0.16)
+
+		;* vertex:	3
+	DC.L	$FFCFFFCE		;* X |Y  (16.0,16.0)	(-49,-50)
+	DC.L	$FFCFDB0D		;* Z |Nx (16.0,0.16)	(-49)
+	DC.L	$DB0DDB0D		;* Ny|Nz (0.16,0.16)
+
+		;* vertex:	4
+	DC.L	$FFCF0031		;* X |Y  (16.0,16.0)	(-49,49)
+	DC.L	$0032DB0D		;* Z |Nx (16.0,0.16)	(50)
+	DC.L	$24F324F3		;* Ny|Nz (0.16,0.16)
+
+		;* vertex:	5
+	DC.L	$00310031		;* X |Y  (16.0,16.0)	(49,49)
+	DC.L	$003224F3		;* Z |Nx (16.0,0.16)	(50)
+	DC.L	$24F324F3		;* Ny|Nz (0.16,0.16)
+
+		;* vertex:	6
+	DC.L	$0031FFCE		;* X |Y  (16.0,16.0)	(49,-50)
+	DC.L	$003224F3		;* Z |Nx (16.0,0.16)	(50)
+	DC.L	$DB0D24F3		;* Ny|Nz (0.16,0.16)
+
+		;* vertex:	7
+	DC.L	$FFCFFFCE		;* X |Y  (16.0,16.0)	(-49,-50)
+	DC.L	$0032DB0D		;* Z |Nx (16.0,0.16)	(50)
+	DC.L	$DB0D24F3		;* Ny|Nz (0.16,0.16)
+
+	;* Model Size = ( 260 = 0x104 ) bytes
+
+
+;*======================================================================*
+
+	.phrase
+
+
+	.end
+
+
+See the routines in MODEL.C for further detail.
+
